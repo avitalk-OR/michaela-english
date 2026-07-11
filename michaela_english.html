@@ -208,6 +208,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 /* WORD TRANSITION */
 .word-transition{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,10,30,.92);z-index:130;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:none}
 .word-transition.hidden{display:none}
+#addWordOverlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.82);z-index:260;display:flex;align-items:center;justify-content:center;padding:20px}
 #addWordOverlay.hidden{display:none}
 .wt-animal{font-size:7rem;animation:animalJump .5s ease-out infinite alternate}
 @keyframes animalJump{0%{transform:translateY(0) scale(1)}100%{transform:translateY(-25px) scale(1.1)}}
@@ -270,7 +271,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 </div>
 
 <!-- ADD WORD -->
-<div id="addWordOverlay" class="hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.82);z-index:260;display:flex;align-items:center;justify-content:center;padding:20px">
+<div id="addWordOverlay" class="hidden">
   <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:3px solid rgba(255,255,255,.3);border-radius:28px;padding:26px 20px;text-align:center;max-width:340px;width:100%">
     <div style="font-size:1.3rem;font-weight:700;margin-bottom:16px">➕ הוספת מילה חדשה</div>
     <input id="newWordEn" type="text" placeholder="מילה באנגלית" dir="ltr" style="width:100%;padding:12px;border-radius:14px;border:2px solid rgba(255,255,255,.4);background:rgba(255,255,255,.12);color:#fff;font-size:1.1rem;margin-bottom:10px;text-align:center">
