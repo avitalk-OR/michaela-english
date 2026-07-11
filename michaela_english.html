@@ -254,9 +254,6 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 </head>
 <body>
 
-<!-- Global sound test button (always visible) -->
-<button onclick="testSound()" style="position:fixed;top:10px;right:10px;z-index:300;background:rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.3);color:#fff;width:42px;height:42px;border-radius:50%;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center" title="בדיקת קול">🔊</button>
-
 <!-- Global score badge (always visible, same spot on every screen) -->
 <div id="globalStars" style="position:fixed;top:10px;left:10px;z-index:300;background:rgba(0,0,0,.45);border:2px solid gold;color:#fff;padding:8px 16px;border-radius:30px;font-size:1rem;font-weight:700;display:flex;align-items:center;gap:6px" title="ניקוד">⭐ <span id="starsDispGlobal">0</span></div>
 
@@ -300,8 +297,6 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
   <div class="w-title">שלום מיכאלה!</div>
   <div class="w-sub">בואי ללמוד אנגלית ביחד 🎀</div>
   <button class="btn btn-pink" style="margin-top:18px" onclick="speechSynthesis.speak(new SpeechSynthesisUtterance(''));unlockAudio();showScreen('menu');setTimeout(()=>showCatMascot('מיכאלה! 😸 יאללה!'),600)">בואי נתחיל! 🚀</button>
-  <button onclick="testSound()" style="margin-top:12px;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.4);color:#fff;padding:10px 22px;border-radius:30px;font-size:1rem;cursor:pointer;font-weight:600">🔊 בדיקת קול</button>
-  <div id="soundNote" style="font-size:.78rem;opacity:.55;direction:rtl;margin-top:6px;max-width:280px;text-align:center">אם אין קול — לחצי תחילה על "בדיקת קול"</div>
 </div>
 
 <!-- MENU -->
@@ -350,7 +345,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
   </div>
   <div class="spell-card">
     <div id="spellEmoji" style="font-size:4rem;margin-bottom:6px">🐱</div>
-    <div id="spellHe" style="font-size:1.3rem;direction:rtl;margin-bottom:4px;font-weight:600">חתול</div>
+    <div id="spellHe" style="font-size:1.95rem;direction:rtl;margin-bottom:4px;font-weight:600">חתול</div>
     <div style="font-size:.85rem;opacity:.65;direction:rtl;margin-bottom:2px">גררי אות לתיבה, או הקישי עליה ואז על התיבה 👇</div>
     <button class="aud-btn" onclick="speakSpellWord()" style="margin-bottom:8px">🔊 שמעי</button>
     <div class="spell-slots" id="spellSlots"></div>
@@ -372,12 +367,12 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
   <div class="scr-header">
     <button class="back-btn" onclick="showScreen('menu')">🏠</button>
     <div class="scr-title" id="examTitle">📝 מבחן</div>
-    <div class="exam-score-badge" id="examScoreBadge">✅ 0</div>
+    <div class="exam-score-badge" id="examScoreBadge">⭐ 0</div>
   </div>
   <div class="exam-card">
     <div id="examQNum" style="font-size:.85rem;opacity:.65;direction:rtl;margin-bottom:10px">שאלה 1 מתוך 8</div>
     <div id="examEmoji" style="font-size:4.2rem;margin-bottom:10px">🍎</div>
-    <div id="examHe" style="font-size:1.2rem;direction:rtl;margin-bottom:4px;min-height:28px;font-weight:600"></div>
+    <div id="examHe" style="font-size:1.8rem;direction:rtl;margin-bottom:4px;min-height:28px;font-weight:600"></div>
     <div id="examPrompt" style="font-size:.85rem;opacity:.7;direction:rtl;margin-bottom:8px"></div>
     <button class="aud-btn" id="examReplay" style="margin:0 auto 8px;display:block" onclick="if(window._curExamQ){var q=window._curExamQ;examType==='words'?speakEN(q.en):speakHE(q.he||q.ex||'')}" title="שמעי שוב 🔊">🔊</button>
     <div class="quiz-opts" id="examOpts"></div>
@@ -566,9 +561,14 @@ function addStar(){
   updateStarsDisp();
   floatStar();
 }
+// One shared, cumulative score — every badge in the app (global corner, spell
+// screen, exam/words screen) always shows this same number, not a separate
+// per-game tally, so there's only ever one running score in the whole game.
 function updateStarsDisp(){
   const el=document.getElementById('starsDisp');if(el) el.textContent=totalStars;
   const g=document.getElementById('starsDispGlobal');if(g) g.textContent=totalStars;
+  const s=document.getElementById('spellScoreBadge');if(s) s.textContent=`⭐ ${totalStars}`;
+  const x=document.getElementById('examScoreBadge');if(x) x.textContent=`⭐ ${totalStars}`;
 }
 function floatStar(){
   const c=document.getElementById('floatStars');
@@ -741,19 +741,9 @@ function _wsa(text,lang,cb){
 // It cancels + queues a throwaway empty utterance, which — when called before
 // every single word — was racing against _wsa()'s own cancel() and causing
 // choppy/cut-off speech. It only needs to run once, from a user gesture
-// (see the welcome screen button and testSound()).
+// (see the welcome screen's start button).
 function speakEN(text,cb){ _wsa(text,'en-US',cb); }
 function speakHE(text,cb){ _wsa(text,'he-IL',cb); }
-
-// ── Test button
-function testSound(){
-  unlockAudio();
-  _beep(660,0.2);
-  _wsa('Hello Michaela','en-US',()=>{
-    setTimeout(()=>_wsa('שלום מיכאלה','he-IL',null),400);
-  });
-  showToast('🔊 בודק — צריך לשמוע "Hello Michaela"');
-}
 
 // ── TOAST ─────────────────────────────────────────────────────────────────
 let toastT;
@@ -954,7 +944,6 @@ function loadSpellWords(){
 let spellIdx=0;
 let spellSlotData=[];
 let spellTarget=[];     // correct uppercase letters for current word
-let spellCorrectCount=0;
 // Hybrid tap-or-drag model: tap a letter tile to pick it up, then tap a box to place it —
 // OR press and drag a tile straight onto a box in one gesture. Pointer Events unify
 // mouse/touch/pen so both interactions share the same pick-up state below.
@@ -1083,7 +1072,7 @@ function updateSpellDisp(){
   const tot=SPELL_WORDS.length,done=spellIdx%tot;
   document.getElementById('spellBar').style.width=(done/tot*100)+'%';
   document.getElementById('spellProg').textContent=`מילה ${(spellIdx%tot)+1} מתוך ${tot}`;
-  document.getElementById('spellScoreBadge').textContent=`⭐ ${spellCorrectCount}`;
+  document.getElementById('spellScoreBadge').textContent=`⭐ ${totalStars}`;
 }
 
 // Word audio is English-only — the Hebrew meaning is always shown as text, never spoken.
@@ -1195,7 +1184,6 @@ function checkSpell(){
   });
   if(allOk){
     document.getElementById('spellFb').textContent='✅ מצוין! כתבת נכון!';
-    spellCorrectCount++;
     if(spellExamMode) spellExamCorrect++;
     addStar();
     showCatMascot('מיכאלה! כתבת נכון! 😻');
@@ -1263,7 +1251,7 @@ function showExamQ(){
   window._curExamQ=q;
   const total=examQs.length;
   document.getElementById('examQNum').textContent=`שאלה ${examIdx+1} מתוך ${total}`;
-  document.getElementById('examScoreBadge').textContent=`✅ ${examScore}`;
+  document.getElementById('examScoreBadge').textContent=`⭐ ${totalStars}`;
   document.getElementById('examBar').style.width=(examIdx/total*100)+'%';
   document.getElementById('examFb').textContent='';
   document.getElementById('examNext').style.display='none';
