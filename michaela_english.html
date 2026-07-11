@@ -208,6 +208,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 /* WORD TRANSITION */
 .word-transition{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,10,30,.92);z-index:130;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:none}
 .word-transition.hidden{display:none}
+#addWordOverlay.hidden{display:none}
 .wt-animal{font-size:7rem;animation:animalJump .5s ease-out infinite alternate}
 @keyframes animalJump{0%{transform:translateY(0) scale(1)}100%{transform:translateY(-25px) scale(1.1)}}
 .wt-text{font-size:1.5rem;font-weight:700;color:#FFD700;direction:rtl;text-align:center}
@@ -300,8 +301,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
     <div class="menu-card" onclick="startExam('words')"><div class="mc-icon">🎯</div><div class="mc-label">התאמת מילים<br>📖 🔊</div></div>
     <div class="menu-card" onclick="startExam('wordsHe')"><div class="mc-icon">🔄</div><div class="mc-label">התאמת מילים הפוך<br>🔊 📖</div></div>
   </div>
-  <button class="btn btn-blue btn-sm" id="addWordBtn" style="margin-top:18px" onclick="openAddWord()">➕ הוסיפי מילה חדשה</button>
-  <button class="btn btn-purple btn-sm" id="resetScoreBtn" style="margin-top:10px" onclick="confirmResetScore()">🔄 איפוס ניקוד</button>
+  <button class="btn btn-purple btn-sm" id="resetScoreBtn" style="margin-top:18px" onclick="confirmResetScore()">🔄 איפוס ניקוד</button>
 </div>
 
 <!-- LETTERS -->
