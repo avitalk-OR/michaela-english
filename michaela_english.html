@@ -268,6 +268,20 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
   <div class="wt-text" id="wtText">מיכאלה את כוכבת! ⭐</div>
 </div>
 
+<!-- ADD WORD -->
+<div id="addWordOverlay" class="hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.82);z-index:260;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:3px solid rgba(255,255,255,.3);border-radius:28px;padding:26px 20px;text-align:center;max-width:340px;width:100%">
+    <div style="font-size:1.3rem;font-weight:700;margin-bottom:16px">➕ הוספת מילה חדשה</div>
+    <input id="newWordEn" type="text" placeholder="מילה באנגלית" dir="ltr" style="width:100%;padding:12px;border-radius:14px;border:2px solid rgba(255,255,255,.4);background:rgba(255,255,255,.12);color:#fff;font-size:1.1rem;margin-bottom:10px;text-align:center">
+    <input id="newWordHe" type="text" placeholder="תרגום בעברית" dir="rtl" style="width:100%;padding:12px;border-radius:14px;border:2px solid rgba(255,255,255,.4);background:rgba(255,255,255,.12);color:#fff;font-size:1.1rem;margin-bottom:6px;text-align:center">
+    <div id="addWordFb" style="min-height:24px;font-size:.9rem;direction:rtl;font-weight:700;margin-bottom:8px"></div>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button class="btn btn-green btn-sm" onclick="submitNewWord()">✅ הוסיפי</button>
+      <button class="btn btn-purple btn-sm" onclick="closeAddWord()">ביטול</button>
+    </div>
+  </div>
+</div>
+
 <!-- WELCOME -->
 <div class="screen" id="screen-welcome">
   <div class="w-crown">👑</div>
@@ -284,8 +298,10 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
     <div class="menu-card" onclick="showScreen('letters')"><div class="mc-icon">🔤</div><div class="mc-label">אותיות<br>Letters</div></div>
     <div class="menu-card" onclick="showScreen('spell')"><div class="mc-icon">🔡</div><div class="mc-label">הרכבת מילים<br>⚔️ 🍎</div></div>
     <div class="menu-card" onclick="startExam('words')"><div class="mc-icon">🎯</div><div class="mc-label">התאמת מילים<br>📖 🔊</div></div>
+    <div class="menu-card" onclick="startExam('wordsHe')"><div class="mc-icon">🔄</div><div class="mc-label">התאמת מילים הפוך<br>🔊 📖</div></div>
   </div>
-  <button class="btn btn-purple btn-sm" id="resetScoreBtn" style="margin-top:18px" onclick="confirmResetScore()">🔄 איפוס ניקוד</button>
+  <button class="btn btn-blue btn-sm" id="addWordBtn" style="margin-top:18px" onclick="openAddWord()">➕ הוסיפי מילה חדשה</button>
+  <button class="btn btn-purple btn-sm" id="resetScoreBtn" style="margin-top:10px" onclick="confirmResetScore()">🔄 איפוס ניקוד</button>
 </div>
 
 <!-- LETTERS -->
@@ -352,7 +368,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
     <div id="examEmoji" style="font-size:4.2rem;margin-bottom:10px">🍎</div>
     <div id="examHe" style="font-size:1.8rem;direction:rtl;margin-bottom:4px;min-height:28px;font-weight:600"></div>
     <div id="examPrompt" style="font-size:.85rem;opacity:.7;direction:rtl;margin-bottom:8px"></div>
-    <button class="aud-btn" id="examReplay" style="margin:0 auto 8px;display:block" onclick="if(window._curExamQ){var q=window._curExamQ;examType==='words'?speakEN(q.en):speakHE(q.he||q.ex||'')}" title="שמעי שוב 🔊">🔊</button>
+    <button class="aud-btn" id="examReplay" style="margin:0 auto 8px;display:block" onclick="if(window._curExamQ){var q=window._curExamQ;(examType==='words'||examType==='wordsHe')?speakEN(q.en):speakHE(q.he||q.ex||'')}" title="שמעי שוב 🔊">🔊</button>
     <div class="quiz-opts" id="examOpts"></div>
     <div id="examFb" style="font-size:1.15rem;min-height:34px;direction:rtl;font-weight:700;margin-top:8px"></div>
     <button class="btn btn-pink btn-sm" id="examNext" style="display:none;margin-top:12px" onclick="examIdx++;showExamQ()">הבאה ➡️</button>
@@ -584,6 +600,34 @@ function confirmResetScore(){
     btn.dataset.confirming='';
     btn.textContent='🔄 איפוס ניקוד';
   },3000);
+}
+
+// ── ADD WORD ──────────────────────────────────────────────────────────────
+// New words go into every category (spell, words, wordsHe) because all three
+// read from the same WORD_ROWS/SPELL_WORDS arrays.
+function openAddWord(){
+  document.getElementById('newWordEn').value='';
+  document.getElementById('newWordHe').value='';
+  document.getElementById('addWordFb').textContent='';
+  document.getElementById('addWordOverlay').classList.remove('hidden');
+}
+function closeAddWord(){
+  document.getElementById('addWordOverlay').classList.add('hidden');
+}
+function submitNewWord(){
+  const enRaw=document.getElementById('newWordEn').value.trim();
+  const heRaw=document.getElementById('newWordHe').value.trim();
+  const fb=document.getElementById('addWordFb');
+  if(!enRaw||!heRaw){ fb.textContent='⚠️ צריך למלא גם באנגלית וגם בעברית'; return; }
+  const en=enRaw.toLowerCase();
+  const he=heRaw;
+  const custom=loadCustomWords();
+  custom.push({en,he});
+  localStorage.setItem('mk_custom_words',JSON.stringify(custom));
+  WORD_ROWS.push({en,he,em:WORD_EMOJI[en]||'📘'});
+  SPELL_WORDS=groupAndShuffle(WORD_ROWS);
+  showToast(`✅ המילה "${capWord(en)}" נוספה למשחק!`);
+  closeAddWord();
 }
 
 // ── CELEBRATION ───────────────────────────────────────────────────────────
@@ -869,12 +913,22 @@ function groupAndShuffle(words){
   return shuffle(groups).map(g=>shuffle(g)).flat();
 }
 
+// Words added via the "add a new word" button live in localStorage (this app
+// has no backend), separate from the base list, and get merged in on every load.
+function loadCustomWords(){
+  try{ return JSON.parse(localStorage.getItem('mk_custom_words')||'[]'); }
+  catch(e){ return []; }
+}
+
 function loadSpellWords(){
   fetch('WORD_LIST.txt')
     .then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.text(); })
     .catch(()=>WORD_LIST_FALLBACK)
     .then(txt=>{
       WORD_ROWS=parseWordListText(txt);
+      loadCustomWords().forEach(w=>{
+        if(w&&w.en&&w.he) WORD_ROWS.push({en:w.en,he:w.he,em:WORD_EMOJI[w.en]||'📘'});
+      });
       SPELL_WORDS=groupAndShuffle(WORD_ROWS);
       spellWordsLoaded=true;
       if(!document.getElementById('screen-spell').classList.contains('hidden')) updateSpellDisp();
@@ -1169,7 +1223,7 @@ let examIdx=0;
 let examScore=0;
 let examMaxScore=0; // words mode scores 3/1/0 per question, not a flat 1 — needed for % grading
 
-const EXAM_TITLES={letters:'📝 מבחן אותיות',spell:'📝 מבחן הרכבה',words:'🎯 התאמת מילים'};
+const EXAM_TITLES={letters:'📝 מבחן אותיות',spell:'📝 מבחן הרכבה',words:'🎯 התאמת מילים',wordsHe:'🎯 מאנגלית לעברית'};
 
 function startExam(type){
   examType=type;
@@ -1184,7 +1238,7 @@ function startExam(type){
     spellExamStart=spellIdx;
     examQs=new Array(8);
     showScreen('spell');return;
-  } else if(type==='words'){
+  } else if(type==='words'||type==='wordsHe'){
     if(!spellWordsLoaded){ showToast('⏳ טוענת מילים... נסי שוב בעוד רגע'); return; }
     // Every word in the list, freshly regrouped+reshuffled each round (same
     // topic-cluster logic as the spelling game) rather than a fixed subset.
@@ -1218,8 +1272,19 @@ function showExamQ(){
     document.getElementById('examPrompt').textContent='לחצי על המילה הנכונה באנגלית 👇';
     const others=[...new Set(WORD_ROWS.map(w=>w.en))].filter(en=>en!==q.en);
     const wrong=shuffle(others).slice(0,2);
-    const opts=shuffle([q.en,...wrong]);
-    buildWordsOpts(opts.map(capWord), q.en, ()=>speakEN(q.en));
+    const opts=shuffle([q.en,...wrong]).map(capWord);
+    buildWordsOpts(opts, capWord(q.en), ()=>speakEN(q.en));
+    return;
+  }
+
+  if(examType==='wordsHe'){
+    document.getElementById('examEmoji').textContent=q.em;
+    document.getElementById('examHe').textContent=capWord(q.en);
+    document.getElementById('examPrompt').textContent='לחצי על המילה הנכונה בעברית 👇';
+    const others=[...new Set(WORD_ROWS.map(w=>w.he))].filter(he=>he!==q.he);
+    const wrong=shuffle(others).slice(0,2);
+    const opts=shuffle([q.he,...wrong]);
+    buildWordsOpts(opts, q.he, ()=>speakEN(q.en));
     return;
   }
 
@@ -1266,7 +1331,7 @@ function buildExamOpts(labels, isCorrect, onReveal){
 // Words quiz: 3 pts for a correct first guess. On a wrong first guess, that
 // button locks out but the remaining two stay live for a second guess — worth
 // 1 pt if right. A wrong second guess reveals the answer for 0 pts.
-function buildWordsOpts(labels, correctEn, onReveal){
+function buildWordsOpts(labels, correctLabel, onReveal){
   const g=document.getElementById('examOpts');
   g.innerHTML='';
   g.style.gridTemplateColumns='1fr 1fr 1fr';
@@ -1290,7 +1355,7 @@ function buildWordsOpts(labels, correctEn, onReveal){
     b.textContent=label;
     b.onclick=()=>{
       if(b.disabled) return;
-      const isCorrect=label.toLowerCase()===correctEn;
+      const isCorrect=label===correctLabel;
       if(isCorrect){
         b.style.background='linear-gradient(135deg,#2ECC71,#1A8A4A)';
         finish(attempt===1?3:1, attempt===1?'✅ מעולה! ניחוש ראשון! ⭐⭐⭐':'✅ יפה מאוד! ⭐');
@@ -1302,7 +1367,7 @@ function buildWordsOpts(labels, correctEn, onReveal){
         document.getElementById('examFb').textContent='❌ נסי שוב מבין השתיים שנשארו!';
       } else {
         b.style.background='linear-gradient(135deg,#E74C3C,#922B21)';
-        g.querySelectorAll('button').forEach(x=>{if(x.textContent.toLowerCase()===correctEn) x.style.background='linear-gradient(135deg,#2ECC71,#1A8A4A)';});
+        g.querySelectorAll('button').forEach(x=>{if(x.textContent===correctLabel) x.style.background='linear-gradient(135deg,#2ECC71,#1A8A4A)';});
         finish(0,'❌ הפעם לא - זו הייתה התשובה הנכונה');
       }
     };
