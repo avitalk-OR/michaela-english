@@ -308,6 +308,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
     <div class="menu-card" onclick="showScreen('spell')"><div class="mc-icon">🔡</div><div class="mc-label">הרכבת מילים<br>⚔️ 🍎</div></div>
     <div class="menu-card" onclick="startExam('words')"><div class="mc-icon">🎯</div><div class="mc-label">התאמת מילים<br>📖 🔊</div></div>
   </div>
+  <button class="btn btn-purple btn-sm" id="resetScoreBtn" style="margin-top:18px" onclick="confirmResetScore()">🔄 איפוס ניקוד</button>
 </div>
 
 <!-- LETTERS -->
@@ -582,6 +583,30 @@ function floatStar(){
   s.style.cssText=`left:${20+Math.random()*60}%;bottom:32%;animation-delay:${Math.random()*0.3}s`;
   c.appendChild(s);
   setTimeout(()=>s.remove(),2500);
+}
+
+// Requires a second tap within 3s to actually reset — cheap guard against an
+// accidental tap wiping out earned progress, without a jarring native confirm().
+let resetConfirmTimer=null;
+function confirmResetScore(){
+  const btn=document.getElementById('resetScoreBtn');
+  if(btn.dataset.confirming==='1'){
+    clearTimeout(resetConfirmTimer);
+    btn.dataset.confirming='';
+    btn.textContent='🔄 איפוס ניקוד';
+    totalStars=0;
+    localStorage.setItem('mk_stars',totalStars);
+    updateStarsDisp();
+    showToast('הניקוד אופס! 🔄');
+    return;
+  }
+  btn.dataset.confirming='1';
+  btn.textContent='בטוחה? לחצי שוב לאיפוס ⚠️';
+  clearTimeout(resetConfirmTimer);
+  resetConfirmTimer=setTimeout(()=>{
+    btn.dataset.confirming='';
+    btn.textContent='🔄 איפוס ניקוד';
+  },3000);
 }
 
 // ── CELEBRATION ───────────────────────────────────────────────────────────
