@@ -95,8 +95,9 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 .stars-bg{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:0}
 .star-p{position:absolute;background:#fff;border-radius:50%;animation:twinkle 3s infinite alternate}
 @keyframes twinkle{0%{opacity:.3;transform:scale(1)}100%{opacity:1;transform:scale(1.5)}}
-.screen{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;z-index:1;overflow-y:auto}
+.screen{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;z-index:1;overflow-y:auto;opacity:1;transition:opacity .18s ease}
 .screen.hidden{display:none}
+.screen.screen-fade{opacity:0}
 /* WELCOME */
 #screen-welcome{text-align:center;gap:12px}
 .w-crown{font-size:clamp(4rem,18vw,9rem);animation:bounce 1.2s infinite alternate}
@@ -497,16 +498,33 @@ function makeBgStars(){
 
 // ── SCREENS ───────────────────────────────────────────────────────────────
 function showScreen(name){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
-  document.getElementById('screen-'+name).classList.remove('hidden');
-  if(name==='spell'){
-    if(spellWordsLoaded) updateSpellDisp();
-    else {
-      document.getElementById('spellEmoji').textContent='⏳';
-      document.getElementById('spellHe').textContent='טוענת מילים...';
-      document.getElementById('spellSlots').innerHTML='';
-      document.getElementById('spellTiles').innerHTML='';
+  const next=document.getElementById('screen-'+name);
+  const current=document.querySelector('.screen:not(.hidden)');
+  const reveal=()=>{
+    document.querySelectorAll('.screen').forEach(s=>{if(s!==next) s.classList.add('hidden');});
+    next.classList.remove('hidden');
+    next.classList.add('screen-fade'); // start invisible...
+    void next.offsetWidth; // ...force layout so the browser registers that state...
+    next.classList.remove('screen-fade'); // ...then transition to visible
+    if(name==='spell'){
+      if(spellWordsLoaded) updateSpellDisp();
+      else {
+        document.getElementById('spellEmoji').textContent='⏳';
+        document.getElementById('spellHe').textContent='טוענת מילים...';
+        document.getElementById('spellSlots').innerHTML='';
+        document.getElementById('spellTiles').innerHTML='';
+      }
     }
+  };
+  // Fade the outgoing screen out first, then fade the next one in — sequential
+  // rather than a simultaneous crossfade, since screens share the page's
+  // background rather than each having their own, so overlapping them mid-fade
+  // would show both screens' content mixed together.
+  if(current&&current!==next){
+    current.classList.add('screen-fade');
+    setTimeout(reveal,180);
+  } else {
+    reveal();
   }
 }
 
@@ -1199,6 +1217,7 @@ let spellExamStart=0;
 function endSpellExam(){
   spellExamMode=false; examType='spell'; examScore=spellExamCorrect;
   examQs=new Array(spellExamTotal);
+  examMaxScore=spellExamTotal; // 1 pt/word here, unlike the 3/1/0 words-quiz scale
   showResults();
 }
 
@@ -1207,6 +1226,7 @@ let examType='';
 let examQs=[];
 let examIdx=0;
 let examScore=0;
+let examMaxScore=0; // words mode scores 3/1/0 per question, not a flat 1 — needed for % grading
 
 const EXAM_TITLES={letters:'📝 מבחן אותיות',spell:'📝 מבחן הרכבה',words:'🎯 התאמת מילים'};
 
@@ -1216,6 +1236,7 @@ function startExam(type){
   examScore=0;
   if(type==='letters'){
     examQs=shuffle([...LETTERS]).slice(0,15);
+    examMaxScore=examQs.length;
   } else if(type==='spell'){
     // Spell exam: run through the spell screen itself for a fixed number of words
     spellExamMode=true;spellExamCorrect=0;spellExamTotal=8;
@@ -1227,6 +1248,7 @@ function startExam(type){
     // Every word in the list, freshly regrouped+reshuffled each round (same
     // topic-cluster logic as the spelling game) rather than a fixed subset.
     examQs=groupAndShuffle(WORD_ROWS);
+    examMaxScore=examQs.length*3; // 3 pts for a first-try correct guess, per question
   }
   document.getElementById('examTitle').textContent=EXAM_TITLES[type]||'📝 מבחן';
   showScreen('exam');
@@ -1256,7 +1278,7 @@ function showExamQ(){
     const others=[...new Set(WORD_ROWS.map(w=>w.en))].filter(en=>en!==q.en);
     const wrong=shuffle(others).slice(0,2);
     const opts=shuffle([q.en,...wrong]);
-    buildExamOpts(opts.map(capWord), label=>label.toLowerCase()===q.en, ()=>speakEN(q.en));
+    buildWordsOpts(opts.map(capWord), q.en, ()=>speakEN(q.en));
     return;
   }
 
@@ -1300,9 +1322,57 @@ function buildExamOpts(labels, isCorrect, onReveal){
   });
 }
 
+// Words quiz: 3 pts for a correct first guess. On a wrong first guess, that
+// button locks out but the remaining two stay live for a second guess — worth
+// 1 pt if right. A wrong second guess reveals the answer for 0 pts.
+function buildWordsOpts(labels, correctEn, onReveal){
+  const g=document.getElementById('examOpts');
+  g.innerHTML='';
+  g.style.gridTemplateColumns='1fr 1fr 1fr';
+  const longLabels=labels.some(l=>l.length>6);
+  let attempt=1;
+  const finish=(pts,fbText)=>{
+    g.querySelectorAll('button').forEach(x=>x.disabled=true);
+    examScore+=pts;
+    for(let i=0;i<pts;i++) addStar();
+    document.getElementById('examFb').textContent=fbText;
+    onReveal();
+    const nb=document.getElementById('examNext');
+    nb.textContent='הבאה ➡️';
+    nb.style.display='block';
+    nb.onclick=()=>{examIdx++;showExamQ();};
+  };
+  labels.forEach(label=>{
+    const b=document.createElement('button');
+    b.className='btn btn-blue';
+    b.style.cssText=`min-width:0;font-size:${longLabels?'.82rem':'1rem'};padding:12px 6px;border-radius:14px`;
+    b.textContent=label;
+    b.onclick=()=>{
+      if(b.disabled) return;
+      const isCorrect=label.toLowerCase()===correctEn;
+      if(isCorrect){
+        b.style.background='linear-gradient(135deg,#2ECC71,#1A8A4A)';
+        finish(attempt===1?3:1, attempt===1?'✅ מעולה! ניחוש ראשון! ⭐⭐⭐':'✅ יפה מאוד! ⭐');
+      } else if(attempt===1){
+        b.disabled=true;
+        b.style.background='linear-gradient(135deg,#E74C3C,#922B21)';
+        b.style.opacity='.4';
+        attempt=2;
+        document.getElementById('examFb').textContent='❌ נסי שוב מבין השתיים שנשארו!';
+      } else {
+        b.style.background='linear-gradient(135deg,#E74C3C,#922B21)';
+        g.querySelectorAll('button').forEach(x=>{if(x.textContent.toLowerCase()===correctEn) x.style.background='linear-gradient(135deg,#2ECC71,#1A8A4A)';});
+        finish(0,'❌ הפעם לא - זו הייתה התשובה הנכונה');
+      }
+    };
+    g.appendChild(b);
+  });
+}
+
 function showResults(){
   const total=examQs.length;
-  const pct=Math.round(examScore/total*100);
+  const maxScore=examMaxScore||total;
+  const pct=Math.round(examScore/maxScore*100);
   let grade,col,emoji,msg;
   if(pct===100){grade='💯';col='#FFD700';emoji='💎';msg='מושלמת לחלוטין!\nמיכאלה את גאונית! 🌟';}
   else if(pct>=90){grade='A+';col='#FFD700';emoji='🏆';msg='מצוין מאד!\nכל הכבוד מיכאלה! ⭐';}
@@ -1314,7 +1384,9 @@ function showResults(){
   document.getElementById('resEmoji').textContent=emoji;
   const gl=document.getElementById('resGrade');
   gl.textContent=grade;gl.style.color=col;
-  document.getElementById('resScore').textContent=`${examScore} / ${total} נכון`;
+  document.getElementById('resScore').textContent=examType==='words'
+    ? `${examScore} / ${maxScore} נקודות`
+    : `${examScore} / ${total} נכון`;
   document.getElementById('resPct').textContent=`${pct}%`;
   document.getElementById('resMsg').textContent=msg;
   document.getElementById('resStars').textContent=`⭐ +${examScore} כוכבים הרווחת!`;
