@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>מיכאלה לומדת אנגלית! 🌟</title>
+<script>
+// ── PWA SETUP (manifest + service worker, generated in-page so the app stays
+// a single HTML file) ───────────────────────────────────────────────────────
+// Lets Android's "Add to Home Screen" install it in standalone mode, and lets
+// the service worker's cache serve the app if the local Wi-Fi/server drops
+// after it's been opened once. Bump CACHE_NAME below whenever this file changes
+// so returning phones pick up the new version instead of a stale cached copy.
+(function(){
+  const ICON_SVG=`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>`
+    +`<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>`
+    +`<stop offset='0' stop-color='#FF6B9D'/><stop offset='1' stop-color='#9B59B6'/>`
+    +`</linearGradient></defs>`
+    +`<rect width='200' height='200' rx='40' fill='url(#g)'/>`
+    +`<text x='100' y='148' font-size='130' text-anchor='middle'>👑</text></svg>`;
+  const iconURL='data:image/svg+xml,'+encodeURIComponent(ICON_SVG);
+
+  // Manifest URLs must be absolute — they're resolved relative to the manifest's own
+  // (blob:) address, not the page, so a plain relative path here would break start_url.
+  const pageURL=location.href;
+  const scopeURL=new URL('./',location.href).href;
+  const manifest={
+    name:'מיכאלה לומדת אנגלית',
+    short_name:'מיכאלה אנגלית',
+    start_url:pageURL,
+    scope:scopeURL,
+    display:'standalone',
+    orientation:'portrait',
+    background_color:'#1a1a2e',
+    theme_color:'#1a1a2e',
+    icons:[
+      {src:iconURL,sizes:'192x192',type:'image/svg+xml',purpose:'any'},
+      {src:iconURL,sizes:'512x512',type:'image/svg+xml',purpose:'any'},
+      {src:iconURL,sizes:'any',type:'image/svg+xml',purpose:'any'},
+    ],
+  };
+  const manifestURL=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}));
+  const link=document.createElement('link');
+  link.rel='manifest';
+  link.href=manifestURL;
+  document.head.appendChild(link);
+
+  if(!('serviceWorker' in navigator)) return;
+  const wordListURL=new URL('WORD_LIST.txt',location.href).href;
+  // Service worker source is built here (not a separate .js file) and installed via a
+  // blob: URL. Real absolute URLs are baked in below because inside the worker's own
+  // scope, `self.location` would otherwise resolve against that meaningless blob: address.
+  const SW_SOURCE=`
+    const CACHE_NAME='michaela-eng-v2';
+    const PAGE_URL=${JSON.stringify(pageURL)};
+    const ASSETS=${JSON.stringify([pageURL,wordListURL])};
+    self.addEventListener('install',e=>{
+      self.skipWaiting();
+      // Cache each asset independently — WORD_LIST.txt may 404 when the page
+      // isn't served alongside it, and addAll() would abort the whole install
+      // (leaving the page itself uncached) if any single asset failed.
+      e.waitUntil(caches.open(CACHE_NAME).then(c=>Promise.all(
+        ASSETS.map(u=>c.add(u).catch(()=>{}))
+      )));
+    });
+    self.addEventListener('activate',e=>{
+      e.waitUntil(caches.keys().then(keys=>Promise.all(
+        keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k))
+      )));
+      self.clients.claim();
+    });
+    self.addEventListener('fetch',e=>{
+      if(e.request.method!=='GET') return;
+      e.respondWith(
+        fetch(e.request).then(res=>{
+          const copy=res.clone();
+          caches.open(CACHE_NAME).then(c=>c.put(e.request,copy));
+          return res;
+        }).catch(()=>caches.match(e.request).then(hit=>hit||caches.match(PAGE_URL)))
+      );
+    });
+  `;
+  const swURL=URL.createObjectURL(new Blob([SW_SOURCE],{type:'text/javascript'}));
+  navigator.serviceWorker.register(swURL,{scope:'./'}).catch(err=>console.warn('SW registration failed:',err));
+})();
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--pink:#FF6B9D;--purple:#9B59B6;--yellow:#F1C40F;--blue:#3498DB;--green:#2ECC71}
+body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh;color:#fff;font-family:'Segoe UI',Arial,sans-serif;overflow-x:hidden;user-select:none}
+.stars-bg{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:0}
+.star-p{position:absolute;background:#fff;border-radius:50%;animation:twinkle 3s infinite alternate}
+@keyframes twinkle{0%{opacity:.3;transform:scale(1)}100%{opacity:1;transform:scale(1.5)}}
+.screen{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;z-index:1;overflow-y:auto}
+.screen.hidden{display:none}
+/* WELCOME */
+#screen-welcome{text-align:center;gap:12px}
+.w-crown{font-size:clamp(4rem,18vw,9rem);animation:bounce 1.2s infinite alternate}
+@keyframes bounce{0%{transform:translateY(0)}100%{transform:translateY(-18px)}}
+.w-title{font-size:clamp(2rem,9vw,4.5rem);font-weight:900;background:linear-gradient(45deg,#FFD700,#FF6B9D,#4DC3FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.w-sub{font-size:clamp(1.1rem,4vw,1.8rem);opacity:.9;direction:rtl}
+/* BUTTONS */
+.btn{padding:14px 28px;border:none;border-radius:50px;font-size:clamp(1rem,4vw,1.4rem);font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:0 5px 20px rgba(0,0,0,.35);min-width:180px;min-height:56px;touch-action:manipulation}
+.btn:active{transform:scale(.93)}
+.btn-pink{background:linear-gradient(135deg,#FF6B9D,#FF8E53);color:#fff}
+.btn-purple{background:linear-gradient(135deg,#9B59B6,#6C3483);color:#fff}
+.btn-blue{background:linear-gradient(135deg,#3498DB,#1A5276);color:#fff}
+.btn-green{background:linear-gradient(135deg,#2ECC71,#1A8A4A);color:#fff}
+.btn-yellow{background:linear-gradient(135deg,#F1C40F,#D4AC0D);color:#333}
+.btn-sm{padding:10px 18px;font-size:.95rem;min-width:110px;min-height:44px}
+/* MENU */
+#screen-menu{gap:16px;justify-content:center}
+.menu-title{font-size:clamp(1.4rem,6vw,2.5rem);font-weight:900;text-align:center}
+.stars-badge{background:rgba(255,215,0,.18);border:2px solid gold;border-radius:30px;padding:8px 22px;font-size:1.2rem}
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:480px}
+.menu-card{background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,.2);border-radius:22px;padding:22px 12px;text-align:center;cursor:pointer;transition:all .25s;min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.menu-card:active{transform:scale(.94);background:rgba(255,255,255,.22)}
+.mc-icon{font-size:2.4rem}.mc-label{font-size:1rem;font-weight:700}
+/* HEADER */
+.scr-header{display:flex;align-items:center;width:100%;max-width:480px;margin-bottom:14px;gap:12px;flex-shrink:0}
+.back-btn{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:1.4rem;width:48px;height:48px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.back-btn:active{transform:scale(.88)}
+.scr-title{font-size:clamp(1.2rem,5vw,1.8rem);font-weight:700;flex:1;text-align:center}
+/* LETTERS */
+#screen-letters{justify-content:flex-start;padding-top:16px}
+.letter-card{background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:3px solid rgba(255,255,255,.25);border-radius:28px;padding:24px 20px;text-align:center;width:100%;max-width:380px}
+.ltr-big{font-size:clamp(5rem,22vw,10rem);font-weight:900;line-height:1;background:linear-gradient(45deg,#FFD700,#FF6B9D);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.ltr-small{font-size:clamp(2.5rem,11vw,5rem);font-weight:700;opacity:.72;color:#fff;-webkit-text-fill-color:#fff;margin-bottom:14px}
+.ltr-row{display:flex;gap:14px;justify-content:center;align-items:center;flex-wrap:wrap}
+.ltr-info{font-size:1rem;margin-top:12px;direction:rtl;opacity:.9}
+.ltr-nav{display:flex;justify-content:center;gap:16px;margin-top:12px}
+.ltr-progress{font-size:.9rem;opacity:.65;text-align:center;margin-top:6px}
+.ltr-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;width:100%;max-width:380px;margin-top:12px;flex-shrink:0}
+.lm{background:rgba(255,255,255,.1);border-radius:8px;padding:7px 3px;text-align:center;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s;border:2px solid transparent}
+.lm:active{transform:scale(.88)}
+.lm.active{background:rgba(255,215,0,.35);border-color:gold}
+/* OPTION GRID (exam / animal pop-up mini task) */
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.quiz-opts .btn{min-width:0;font-size:.95rem;padding:12px 8px;border-radius:14px}
+/* CELEBRATION */
+#celebration{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px}
+#celebration.hidden{display:none}
+.cel-emojis{font-size:4rem;margin-bottom:12px;animation:bounce 0.8s infinite alternate}
+.cel-text{font-size:clamp(1.4rem,5vw,2.4rem);font-weight:900;direction:rtl;background:linear-gradient(45deg,#FFD700,#FF6B9D,#4DC3FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:18px;line-height:1.45;white-space:pre-line}
+.confetti-c{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:99}
+.cfp{position:absolute;animation:cfall 3s ease-in forwards}
+@keyframes cfall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(105vh) rotate(720deg);opacity:0}}
+.float-stars{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:98}
+.fst{position:absolute;font-size:2rem;animation:fup 2.2s ease-out forwards}
+@keyframes fup{0%{transform:translateY(0) scale(1);opacity:1}100%{transform:translateY(-180px) scale(2.2);opacity:0}}
+/* AUDIO BTN */
+.aud-btn{background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.35);border-radius:50%;width:48px;height:48px;color:#fff;font-size:1.25rem;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center}
+.aud-btn:active{transform:scale(.88);background:rgba(255,255,255,.38)}
+/* TOAST */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.82);color:#fff;padding:11px 24px;border-radius:30px;font-size:.95rem;z-index:200;direction:rtl;text-align:center;max-width:90vw;transition:opacity .3s}
+.toast.hidden{opacity:0;pointer-events:none}
+/* EXAM */
+#screen-exam{justify-content:flex-start;padding-top:16px}
+.exam-card{background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:3px solid rgba(255,255,255,.25);border-radius:28px;padding:22px 18px;text-align:center;width:100%;max-width:380px}
+.exam-score-badge{background:rgba(46,204,113,.22);border:2px solid #2ECC71;border-radius:20px;padding:6px 14px;font-size:.9rem;font-weight:700;flex-shrink:0;white-space:nowrap}
+.exam-test-btn{background:linear-gradient(135deg,#F1C40F,#E67E22);border:none;color:#333;padding:10px 20px;border-radius:50px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .15s;box-shadow:0 4px 14px rgba(0,0,0,.3);min-height:44px;touch-action:manipulation}
+.exam-test-btn:active{transform:scale(.93)}
+/* RESULTS */
+#screen-results{text-align:center;gap:12px;justify-content:center}
+.grade-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.grade-letter{font-size:clamp(4rem,18vw,8rem);font-weight:900;line-height:1;text-shadow:0 0 30px currentColor}
+.res-score{font-size:clamp(1.4rem,5vw,2rem);font-weight:700}
+.res-pct{font-size:1.1rem;opacity:.72}
+.res-msg{font-size:clamp(1rem,4vw,1.3rem);font-weight:700;direction:rtl;white-space:pre-line;line-height:1.5}
+.res-stars{background:rgba(255,215,0,.2);border:2px solid gold;border-radius:30px;padding:8px 20px;font-size:1rem}
+.res-btns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+/* SPELL */
+#screen-spell{justify-content:flex-start;padding-top:16px}
+.spell-card{background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:3px solid rgba(255,255,255,.25);border-radius:28px;padding:22px 18px;text-align:center;width:100%;max-width:400px}
+.spell-slots{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0;direction:ltr}
+.spell-slot{width:52px;height:52px;border:3px dashed rgba(255,255,255,.4);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:900;transition:all .2s;background:rgba(255,255,255,.06);color:#FFD700;position:relative;touch-action:none}
+.spell-slot.filled{border-style:solid;border-color:rgba(255,255,255,.5);background:rgba(255,255,255,.15)}
+.spell-slot.correct{border-color:#2ECC71;background:rgba(46,204,113,.25);color:#2ECC71}
+.spell-slot.wrong{border-color:#E74C3C;background:rgba(231,76,60,.2);color:#E74C3C}
+.spell-slot.drag-over{border-color:#FFD700;background:rgba(255,215,0,.25);transform:scale(1.1)}
+.spell-slot.hover-target{border-color:#FFD700;background:rgba(255,215,0,.4);transform:scale(1.22)}
+.spell-gap{width:16px;height:52px}
+.spell-tiles{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px;direction:ltr}
+.spell-tile{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#9B59B6,#6C3483);border:2px solid rgba(255,255,255,.4);transition:transform .15s,opacity .15s,box-shadow .15s;user-select:none;color:#fff;touch-action:none}
+.spell-tile:active{transform:scale(1.15)}
+.spell-tile.used{opacity:.3;pointer-events:none}
+.spell-tile.drag-active{border-color:#FFD700;box-shadow:0 0 0 3px rgba(255,215,0,.6);transform:scale(1.1)}
+.spell-drag-ghost{position:fixed;pointer-events:none;z-index:400;width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900;background:linear-gradient(135deg,#9B59B6,#6C3483);border:2px solid #FFD700;box-shadow:0 6px 20px rgba(0,0,0,.5);color:#fff;transform:translate(-50%,-50%) scale(1.2)}
+.spell-fb{font-size:1rem;min-height:30px;direction:rtl;margin-top:8px;font-weight:700}
+.spell-word-nav{display:flex;gap:12px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.prog-bar{width:100%;max-width:380px;background:rgba(255,255,255,.2);border-radius:10px;height:9px;margin:12px 0 0}
+.prog-fill{background:linear-gradient(90deg,#4DC3FF,#FF6B9D);height:100%;border-radius:10px;transition:width .5s}
+.prog-text{font-size:.85rem;opacity:.65;text-align:center;margin-top:4px}
+/* CAT MASCOT */
+#catMascot{position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:150;text-align:center;pointer-events:none;transition:bottom .4s cubic-bezier(.175,.885,.32,1.275)}
+#catMascot.hidden{bottom:-220px}
+#catMascot.visible{bottom:0}
+.cat-body{font-size:6rem;animation:catBounce .6s infinite alternate;display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+@keyframes catBounce{0%{transform:translateY(0) rotate(-5deg)}100%{transform:translateY(-18px) rotate(5deg)}}
+.cat-bubble{background:#fff;color:#333;border-radius:20px 20px 20px 4px;padding:10px 18px;font-size:1rem;font-weight:700;direction:rtl;margin-bottom:6px;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:200px;animation:bubblePop .3s ease-out}
+@keyframes bubblePop{0%{transform:scale(0)}100%{transform:scale(1)}}
+/* WORD TRANSITION */
+.word-transition{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,10,30,.92);z-index:130;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:none}
+.word-transition.hidden{display:none}
+#animalTask{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.82);z-index:250;display:flex;align-items:center;justify-content:center;padding:20px}
+#animalTask.hidden{display:none}
+.wt-animal{font-size:7rem;animation:animalJump .5s ease-out infinite alternate}
+@keyframes animalJump{0%{transform:translateY(0) scale(1)}100%{transform:translateY(-25px) scale(1.1)}}
+.wt-text{font-size:1.5rem;font-weight:700;color:#FFD700;direction:rtl;text-align:center}
+/* RESPONSIVE */
+@media(max-width:370px){.menu-grid{gap:10px}.ltr-grid{grid-template-columns:repeat(5,1fr)}}
+/* ── Casual animal pop-up animation ── */
+.pop-animal{position:fixed;font-size:3.2rem;pointer-events:none;z-index:50;
+  animation:animalPop 3s ease-out forwards}
+@keyframes animalPop{
+  0%  {transform:translateY(0)   scale(.4) rotate(-15deg);opacity:0}
+  15% {transform:translateY(-55vh)scale(1.3)rotate(10deg);opacity:1}
+  35% {transform:translateY(-50vh)scale(1)  rotate(-6deg);opacity:1}
+  55% {transform:translateY(-60vh)scale(1.15)rotate(8deg);opacity:1}
+  75% {transform:translateY(-52vh)scale(.95)rotate(-4deg);opacity:.9}
+  100%{transform:translateY(-80vh)scale(.5) rotate(20deg);opacity:0}
+}
+/* ── Compact: fit all content in viewport without scrolling ── */
+.scr-header{margin-bottom:8px}
+.letter-card{padding:12px 14px}
+.ltr-big{font-size:clamp(2.8rem,12vw,5.5rem)}
+.ltr-small{font-size:clamp(1.4rem,5.5vw,2.8rem);margin-bottom:6px}
+.ltr-info{margin-top:6px;font-size:.9rem}
+.ltr-nav{margin-top:6px}
+.ltr-progress{margin-top:2px}
+.ltr-grid{margin-top:8px;gap:4px}
+.lm{padding:5px 2px;font-size:.85rem}
+.quiz-opts{margin:8px 0;gap:8px}
+.quiz-opts .btn{padding:10px 6px;font-size:.88rem}
+.prog-bar{margin:6px 0 0;height:6px}
+.prog-text{margin-top:2px;font-size:.72rem}
+.exam-test-btn{padding:7px 14px;font-size:.85rem;min-height:36px;margin-top:6px!important}
+.spell-card{padding:14px 12px}
+.spell-slot{width:44px;height:44px;font-size:1.4rem}
+.spell-tile{width:44px;height:44px;font-size:1.3rem}
+.spell-gap{height:44px}
+.spell-slots{margin:8px 0}
+.spell-tiles{margin-top:6px}
+.spell-fb{min-height:22px;margin-top:4px}
+.spell-word-nav{margin-top:8px}
+.exam-card{padding:14px 12px}
+</style>
+</head>
+<body>
+
+<!-- Global sound test button (always visible) -->
+<button onclick="testSound()" style="position:fixed;top:10px;right:10px;z-index:300;background:rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.3);color:#fff;width:42px;height:42px;border-radius:50%;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center" title="בדיקת קול">🔊</button>
+
+<!-- Global score badge (always visible, same spot on every screen) -->
+<div id="globalStars" style="position:fixed;top:10px;left:10px;z-index:300;background:rgba(0,0,0,.45);border:2px solid gold;color:#fff;padding:8px 16px;border-radius:30px;font-size:1rem;font-weight:700;display:flex;align-items:center;gap:6px" title="ניקוד">⭐ <span id="starsDispGlobal">0</span></div>
+
+<div class="stars-bg" id="starsBg"></div>
+<div class="confetti-c" id="confettiC"></div>
+<div class="float-stars" id="floatStars"></div>
+<div class="toast hidden" id="toast"></div>
+
+<!-- CELEBRATION -->
+<div id="celebration" class="hidden">
+  <div class="cel-emojis">🌟✨⭐💫🎉</div>
+  <div class="cel-text" id="celText"></div>
+  <button class="btn btn-yellow" onclick="hideCel()">המשיכי ➡️</button>
+</div>
+
+<!-- CAT MASCOT -->
+<div id="catMascot" class="hidden">
+  <div class="cat-bubble" id="catBubble">מיכאלה! 😸</div>
+  <span class="cat-body">🐱</span>
+</div>
+
+<!-- WORD TRANSITION -->
+<div class="word-transition hidden" id="wordTransition">
+  <div class="wt-animal" id="wtAnimal">🐱</div>
+  <div class="wt-text" id="wtText">מיכאלה את כוכבת! ⭐</div>
+</div>
+
+<!-- ANIMAL POP-UP MINI TASK -->
+<div id="animalTask" class="hidden">
+  <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:3px solid rgba(255,255,255,.3);border-radius:28px;padding:26px 20px;text-align:center;max-width:340px;width:100%">
+    <div id="atEmoji" style="font-size:4.5rem;margin-bottom:10px">🐱</div>
+    <div id="atQuestion" style="font-size:1.1rem;font-weight:700;direction:rtl;margin-bottom:14px">מה האות הראשונה של המילה באנגלית?</div>
+    <div class="quiz-opts" id="atOpts"></div>
+    <div id="atFb" style="font-size:1.1rem;min-height:32px;direction:rtl;font-weight:700;margin-top:6px"></div>
+  </div>
+</div>
+
+<!-- WELCOME -->
+<div class="screen" id="screen-welcome">
+  <div class="w-crown">👑</div>
+  <div class="w-title">שלום מיכאלה!</div>
+  <div class="w-sub">בואי ללמוד אנגלית ביחד 🎀</div>
+  <button class="btn btn-pink" style="margin-top:18px" onclick="speechSynthesis.speak(new SpeechSynthesisUtterance(''));unlockAudio();showScreen('menu');setTimeout(()=>showCatMascot('מיכאלה! 😸 יאללה!'),600)">בואי נתחיל! 🚀</button>
+  <button onclick="testSound()" style="margin-top:12px;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.4);color:#fff;padding:10px 22px;border-radius:30px;font-size:1rem;cursor:pointer;font-weight:600">🔊 בדיקת קול</button>
+  <div id="soundNote" style="font-size:.78rem;opacity:.55;direction:rtl;margin-top:6px;max-width:280px;text-align:center">אם אין קול — לחצי תחילה על "בדיקת קול"</div>
+</div>
+
+<!-- MENU -->
+<div class="screen hidden" id="screen-menu">
+  <div class="menu-title">מה נלמד היום? 📚</div>
+  <div class="stars-badge">⭐ כוכבים שלי: <span id="starsDisp">0</span></div>
+  <div class="menu-grid">
+    <div class="menu-card" onclick="showScreen('letters')"><div class="mc-icon">🔤</div><div class="mc-label">אותיות<br>Letters</div></div>
+    <div class="menu-card" onclick="showScreen('spell')"><div class="mc-icon">🔡</div><div class="mc-label">הרכבת מילים<br>⚔️ 🍎</div></div>
+    <div class="menu-card" onclick="startExam('words')"><div class="mc-icon">🎯</div><div class="mc-label">התאמת מילים<br>📖 🔊</div></div>
+  </div>
+</div>
+
+<!-- LETTERS -->
+<div class="screen hidden" id="screen-letters">
+  <div class="scr-header">
+    <button class="back-btn" onclick="showScreen('menu')">⬅️</button>
+    <div class="scr-title">🔤 האלפבית</div>
+    <button class="back-btn" onclick="showScreen('menu')" title="דף הבית">🏠</button>
+  </div>
+  <div class="letter-card">
+    <div class="ltr-big" id="ltrU">A</div>
+    <div class="ltr-small" id="ltrL">a</div>
+    <div class="ltr-row">
+      <button class="aud-btn" onclick="speakLetter()">🔊</button>
+      <div style="font-size:2.2rem" id="ltrEmoji">🍎</div>
+      <button class="aud-btn" onclick="speakLetterHe()">🇮🇱</button>
+    </div>
+    <div class="ltr-info" id="ltrInfo">א - כמו Apple תפוח</div>
+  </div>
+  <div class="ltr-progress" id="ltrProg">אות 1 מתוך 26</div>
+  <div class="ltr-nav">
+    <button class="btn btn-purple btn-sm" onclick="prevLtr()">⬅️ הקודמת</button>
+    <button class="btn btn-pink btn-sm" onclick="nextLtr()">הבאה ➡️</button>
+  </div>
+  <div class="ltr-grid" id="ltrGrid"></div>
+  <button class="exam-test-btn" onclick="startExam('letters')" style="margin-top:14px;width:100%;max-width:380px">📝 מבחן אותיות!</button>
+</div>
+
+<!-- SPELL -->
+<div class="screen hidden" id="screen-spell">
+  <div class="scr-header">
+    <button class="back-btn" onclick="showScreen('menu')">🏠</button>
+    <div class="scr-title">🔡 הרכבת מילים</div>
+    <div class="exam-score-badge" id="spellScoreBadge">⭐ 0</div>
+  </div>
+  <div class="spell-card">
+    <div id="spellEmoji" style="font-size:4rem;margin-bottom:6px">🐱</div>
+    <div id="spellHe" style="font-size:1.3rem;direction:rtl;margin-bottom:4px;font-weight:600">חתול</div>
+    <div style="font-size:.85rem;opacity:.65;direction:rtl;margin-bottom:2px">גררי אות לתיבה, או הקישי עליה ואז על התיבה 👇</div>
+    <button class="aud-btn" onclick="speakSpellWord()" style="margin-bottom:8px">🔊 שמעי</button>
+    <div class="spell-slots" id="spellSlots"></div>
+    <div class="spell-fb" id="spellFb"></div>
+    <div class="spell-tiles" id="spellTiles"></div>
+    <div class="spell-word-nav">
+      <button class="btn btn-blue btn-sm" onclick="clearSpellSlots()">🔄 נקי</button>
+      <button class="btn btn-green btn-sm" onclick="checkSpell()">✅ בדקי</button>
+      <button class="btn btn-purple btn-sm" onclick="nextSpellWord()">דלגי ⏭️</button>
+    </div>
+  </div>
+  <div class="prog-bar"><div class="prog-fill" id="spellBar" style="width:0%"></div></div>
+  <div class="prog-text" id="spellProg">מילה 1</div>
+  <button class="exam-test-btn" onclick="startExam('spell')" style="margin-top:12px;width:100%;max-width:400px">📝 מבחן הרכבה!</button>
+</div>
+
+<!-- EXAM -->
+<div class="screen hidden" id="screen-exam">
+  <div class="scr-header">
+    <button class="back-btn" onclick="showScreen('menu')">🏠</button>
+    <div class="scr-title" id="examTitle">📝 מבחן</div>
+    <div class="exam-score-badge" id="examScoreBadge">✅ 0</div>
+  </div>
+  <div class="exam-card">
+    <div id="examQNum" style="font-size:.85rem;opacity:.65;direction:rtl;margin-bottom:10px">שאלה 1 מתוך 8</div>
+    <div id="examEmoji" style="font-size:4.2rem;margin-bottom:10px">🍎</div>
+    <div id="examHe" style="font-size:1.2rem;direction:rtl;margin-bottom:4px;min-height:28px;font-weight:600"></div>
+    <div id="examPrompt" style="font-size:.85rem;opacity:.7;direction:rtl;margin-bottom:8px"></div>
+    <button class="aud-btn" id="examReplay" style="margin:0 auto 8px;display:block" onclick="if(window._curExamQ){var q=window._curExamQ;examType==='words'?speakEN(q.en):speakHE(q.he||q.ex||'')}" title="שמעי שוב 🔊">🔊</button>
+    <div class="quiz-opts" id="examOpts"></div>
+    <div id="examFb" style="font-size:1.15rem;min-height:34px;direction:rtl;font-weight:700;margin-top:8px"></div>
+    <button class="btn btn-pink btn-sm" id="examNext" style="display:none;margin-top:12px" onclick="examIdx++;showExamQ()">הבאה ➡️</button>
+  </div>
+  <div class="prog-bar"><div class="prog-fill" id="examBar" style="width:0%"></div></div>
+</div>
+
+<!-- RESULTS -->
+<div class="screen hidden" id="screen-results">
+  <div id="resEmoji" style="font-size:5rem;animation:bounce 1s infinite alternate">🏆</div>
+  <div style="font-size:1.2rem;font-weight:700;opacity:.8">תוצאות המבחן 📋</div>
+  <div class="grade-wrap">
+    <div class="grade-letter" id="resGrade">A+</div>
+    <div class="res-score" id="resScore">10 / 10 נכון</div>
+    <div class="res-pct" id="resPct">100%</div>
+  </div>
+  <div class="res-msg" id="resMsg"></div>
+  <div class="res-stars" id="resStars"></div>
+  <div class="res-btns">
+    <button class="btn btn-green btn-sm" id="resTryAgain">נסי שוב 🔄</button>
+    <button class="btn btn-purple btn-sm" id="resBack">חזרה ⬅️</button>
+    <button class="btn btn-yellow btn-sm" onclick="showScreen('menu')">תפריט 🏠</button>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const LETTERS=[
+  {u:'A',l:'a',em:'🍎',he:'א - כמו Apple תפוח',ex:'Apple'},
+  {u:'B',l:'b',em:'🐝',he:'ב - כמו Bee דבורה',ex:'Bee'},
+  {u:'C',l:'c',em:'🐱',he:'ג - כמו Cat חתול',ex:'Cat'},
+  {u:'D',l:'d',em:'🐶',he:'ד - כמו Dog כלב',ex:'Dog'},
+  {u:'E',l:'e',em:'🐘',he:'ה - כמו Elephant פיל',ex:'Elephant'},
+  {u:'F',l:'f',em:'🐟',he:'ו - כמו Fish דג',ex:'Fish'},
+  {u:'G',l:'g',em:'🦒',he:'ג׳ - כמו Giraffe ג׳ירפה',ex:'Giraffe'},
+  {u:'H',l:'h',em:'🏠',he:'ח - כמו House בית',ex:'House'},
+  {u:'I',l:'i',em:'🍦',he:'אי - כמו Ice cream גלידה',ex:'Ice cream'},
+  {u:'J',l:'j',em:'🤹',he:'ג׳ - כמו Jump לקפוץ',ex:'Jump'},
+  {u:'K',l:'k',em:'🦘',he:'ק - כמו Kangaroo קנגורו',ex:'Kangaroo'},
+  {u:'L',l:'l',em:'🦁',he:'ל - כמו Lion אריה',ex:'Lion'},
+  {u:'M',l:'m',em:'🐒',he:'מ - כמו Monkey קוף',ex:'Monkey'},
+  {u:'N',l:'n',em:'🌙',he:'נ - כמו Night לילה',ex:'Night'},
+  {u:'O',l:'o',em:'🦉',he:'או - כמו Owl ינשוף',ex:'Owl'},
+  {u:'P',l:'p',em:'🐧',he:'פ - כמו Penguin פינגווין',ex:'Penguin'},
+  {u:'Q',l:'q',em:'👸',he:'קו - כמו Queen מלכה',ex:'Queen'},
+  {u:'R',l:'r',em:'🌈',he:'ר - כמו Rainbow קשת',ex:'Rainbow'},
+  {u:'S',l:'s',em:'⭐',he:'ס - כמו Star כוכב',ex:'Star'},
+  {u:'T',l:'t',em:'🐯',he:'ת - כמו Tiger נמר',ex:'Tiger'},
+  {u:'U',l:'u',em:'☂️',he:'או - כמו Umbrella מטריה',ex:'Umbrella'},
+  {u:'V',l:'v',em:'🎻',he:'ב - כמו Violin כינור',ex:'Violin'},
+  {u:'W',l:'w',em:'🐋',he:'ו - כמו Whale לוויתן',ex:'Whale'},
+  {u:'X',l:'x',em:'🎸',he:'קס - כמו Xylophone קסילופון',ex:'Xylophone'},
+  {u:'Y',l:'y',em:'🧶',he:'י - כמו Yarn חוט',ex:'Yarn'},
+  {u:'Z',l:'z',em:'🦓',he:'ז - כמו Zebra זברה',ex:'Zebra'},
+];
+
+// Emoji shown per word — presentation only, the words themselves come from WORD_LIST.txt.
+const WORD_EMOJI={
+  cook:'🍳',eat:'🍽️',open:'🔓',climb:'🧗',glide:'🪂',buy:'🛒',sell:'💰',take:'✋',
+  sword:'⚔️',bow:'🏹',arrow:'🎯',chest:'📦',bomb:'💣',clock:'🕐',map:'🗺️',armor:'🛡️',
+  fire:'🔥',ice:'❄️',cold:'🥶',hot:'🥵',iron:'🔩',wild:'🐾',ruins:'🏚️',
+  horse:'🐎',dog:'🐶',cat:'🐱',power:'💪',time:'⏰',hello:'👋',weak:'🪫',
+  rare:'💎',huge:'🐘',run:'🏃',jump:'🦘',sleep:'😴',save:'💾',help:'🆘',
+  throw:'🤾',water:'💧',rain:'🌧️',sun:'☀️',tree:'🌳',stone:'🪨',day:'🌅',
+  night:'🌙',noon:'🕛',heart:'❤️',apple:'🍎',wood:'🪵',key:'🗝️',door:'🚪',
+  big:'🦣',small:'🐜',fast:'🏎️',slow:'🐌',down:'⬇️',brave:'🦁',magic:'🪄',sit:'🪑',
+  explore:'🔭',collect:'🧺',search:'🔍',examine:'🔬',attack:'⚔️',defend:'🛡️',
+  shield:'🛡️',inventory:'🎒',recipe:'📜',hammer:'🔨',electricity:'⚡',
+  mushroom:'🍄',ancient:'🏺',friend:'🤝',village:'🏘️',shrine:'⛩️',stamina:'🔋',
+  goodbye:'✌️',strong:'💪',hidden:'🙈',dangerous:'⚠️',mountain:'⛰️',
+  morning:'🌄',evening:'🌆',magnet:'🧲',up:'⬆️','wake up':'⏰',
+};
+
+const CELEBRATIONS=[
+  'כל הכבוד מיכאלה!\nזלדה הייתה גאה בך!\nאת אלופה מיכאלה! 🏆',
+  'וואו מיכאלה!\nאיזה יופי!\nאת מדהימה! ✨',
+  'מצוין מיכאלה!\nהגייה מושלמת!\nאת כוכבת! ⭐',
+  'יאללה מיכאלה!\nעשית את זה!\nאת הגדולה! 👑',
+  'כל הכבוד מיכאלה!\nזלדה הייתה גאה בך!\nהמשיכי כך! 🌟',
+  'את נהדרת מיכאלה!\nאת מצליחה יפה מאוד!\nכל הכבוד! 💖',
+  'איזו הצלחה מיכאלה!\nאת אלופה אמיתית!\nממשיכה מצוין! 🥳',
+  'וואו איזה כישרון!\nמיכאלה את פשוט נהדרת!\nתמשיכי ככה! 🌈',
+  'מיכאלה יקירתי!\nאת מצליחה יפה מאוד!\nגאה בך מאוד! 🎉',
+  'איזו גאונה קטנה!\nמיכאלה את אלופה!\nמדהימה בכל מילה! 💫',
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let ltrIdx=0;
+let totalStars=parseInt(localStorage.getItem('mk_stars')||'0');
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+function init(){
+  makeBgStars();
+  updateStarsDisp();
+  buildLtrGrid();
+  updateLtrDisp();
+  loadSpellWords();
+  document.addEventListener('keydown',e=>{
+    if(!document.getElementById('screen-letters').classList.contains('hidden')){
+      if(e.key==='ArrowRight') nextLtr();
+      if(e.key==='ArrowLeft') prevLtr();
+    }
+  });
+}
+
+function makeBgStars(){
+  const bg=document.getElementById('starsBg');
+  for(let i=0;i<55;i++){
+    const s=document.createElement('div');
+    s.className='star-p';
+    const sz=Math.random()*3+1;
+    s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*3}s`;
+    bg.appendChild(s);
+  }
+}
+
+// ── SCREENS ───────────────────────────────────────────────────────────────
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+  document.getElementById('screen-'+name).classList.remove('hidden');
+  if(name==='spell'){
+    if(spellWordsLoaded) updateSpellDisp();
+    else {
+      document.getElementById('spellEmoji').textContent='⏳';
+      document.getElementById('spellHe').textContent='טוענת מילים...';
+      document.getElementById('spellSlots').innerHTML='';
+      document.getElementById('spellTiles').innerHTML='';
+    }
+  }
+}
+
+// ── LETTERS ───────────────────────────────────────────────────────────────
+function buildLtrGrid(){
+  const g=document.getElementById('ltrGrid');
+  g.innerHTML='';
+  LETTERS.forEach((l,i)=>{
+    const el=document.createElement('div');
+    el.className='lm'+(i===0?' active':'');
+    el.id='lm'+i;
+    el.textContent=l.u;
+    el.onclick=()=>{ltrIdx=i;updateLtrDisp();speakLetter();};
+    g.appendChild(el);
+  });
+}
+
+function updateLtrDisp(){
+  const l=LETTERS[ltrIdx];
+  document.getElementById('ltrU').textContent=l.u;
+  document.getElementById('ltrL').textContent=l.l;
+  document.getElementById('ltrEmoji').textContent=l.em;
+  document.getElementById('ltrInfo').textContent=l.he;
+  document.getElementById('ltrProg').textContent=`אות ${ltrIdx+1} מתוך 26`;
+  document.querySelectorAll('.lm').forEach((el,i)=>el.classList.toggle('active',i===ltrIdx));
+  const active=document.getElementById('lm'+ltrIdx);
+  if(active) active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
+}
+
+function prevLtr(){if(ltrIdx>0){ltrIdx--;updateLtrDisp();speakLetter();}}
+function nextLtr(){if(ltrIdx<25){ltrIdx++;updateLtrDisp();speakLetter();}}
+function speakLetter(){const l=LETTERS[ltrIdx];speakEN(l.u+'. '+l.ex);}
+function speakLetterHe(){speakHE(LETTERS[ltrIdx].he);}
+
+// ── STARS ─────────────────────────────────────────────────────────────────
+function addStar(){
+  totalStars++;
+  localStorage.setItem('mk_stars',totalStars);
+  updateStarsDisp();
+  floatStar();
+}
+function updateStarsDisp(){
+  const el=document.getElementById('starsDisp');if(el) el.textContent=totalStars;
+  const g=document.getElementById('starsDispGlobal');if(g) g.textContent=totalStars;
+}
+function floatStar(){
+  const c=document.getElementById('floatStars');
+  const s=document.createElement('div');
+  s.className='fst';
+  s.textContent='⭐';
+  s.style.cssText=`left:${20+Math.random()*60}%;bottom:32%;animation-delay:${Math.random()*0.3}s`;
+  c.appendChild(s);
+  setTimeout(()=>s.remove(),2500);
+}
+
+// ── CELEBRATION ───────────────────────────────────────────────────────────
+function showCel(txt){
+  document.getElementById('celText').textContent=txt;
+  document.getElementById('celebration').classList.remove('hidden');
+  launchConfetti();
+  speakHE(txt.replace(/[🏆✨⭐👑🌟🎉]/g,''));
+}
+function hideCel(){document.getElementById('celebration').classList.add('hidden');}
+
+function launchConfetti(){
+  const c=document.getElementById('confettiC');
+  const cols=['#FF6B9D','#FFD700','#4DC3FF','#2ECC71','#9B59B6','#FF8E53','#fff'];
+  for(let i=0;i<70;i++){
+    const p=document.createElement('div');
+    p.className='cfp';
+    const col=cols[Math.floor(Math.random()*cols.length)];
+    const br=Math.random()>.5?'50%':'3px';
+    const w=8+Math.random()*12,h=8+Math.random()*12;
+    p.style.cssText=`background:${col};left:${Math.random()*100}%;top:-20px;border-radius:${br};width:${w}px;height:${h}px;animation-duration:${2+Math.random()*2}s;animation-delay:${Math.random()*0.6}s;transform:rotate(${Math.random()*360}deg)`;
+    c.appendChild(p);
+  }
+  setTimeout(()=>c.innerHTML='',4500);
+}
+
+// ── SPEECH ────────────────────────────────────────────────────────────────
+// Fully uses window.speechSynthesis for both English and Hebrew.
+// Unlock pattern: call speechSynthesis.speak(empty utterance) from gesture.
+
+let _ac = null;
+let voices = [];
+
+// Load voices — Android/Chrome fires onvoiceschanged; poll as backup
+(()=>{
+  try{
+    if(!window.speechSynthesis) return;
+    const load=()=>{
+      try{ const v=window.speechSynthesis.getVoices(); if(v&&v.length) voices=v; }catch(e){}
+    };
+    window.speechSynthesis.onvoiceschanged=load;
+    load(); setTimeout(load,500); setTimeout(load,1500); setTimeout(load,3000);
+  }catch(e){}
+})();
+
+// AudioContext beep — instant feedback, no TTS needed
+function _beep(freq,dur){
+  try{
+    if(!_ac) _ac=new(window.AudioContext||window.webkitAudioContext)();
+    if(_ac.state==='suspended') _ac.resume();
+    const o=_ac.createOscillator(),g=_ac.createGain();
+    o.connect(g);g.connect(_ac.destination);
+    o.frequency.value=freq||440;
+    g.gain.setValueAtTime(0.3,_ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,_ac.currentTime+(dur||0.3));
+    o.start(_ac.currentTime);o.stop(_ac.currentTime+(dur||0.3));
+  }catch(e){}
+}
+
+// ── Casual animal pop-up animations ──────────────────────────────────────
+const POP_ANIMALS=[
+  {em:'🐱',en:'cat'},{em:'🐶',en:'dog'},{em:'🐰',en:'rabbit'},{em:'🦊',en:'fox'},
+  {em:'🐸',en:'frog'},{em:'🦄',en:'unicorn'},{em:'🐨',en:'koala'},{em:'🐼',en:'panda'},
+  {em:'🦁',en:'lion'},{em:'🐯',en:'tiger'},{em:'🐧',en:'penguin'},{em:'🦒',en:'giraffe'},
+  {em:'🐻',en:'bear'},{em:'🐝',en:'bee'},{em:'🦋',en:'butterfly'},
+];
+function spawnCasualAnimal(){
+  const a=POP_ANIMALS[Math.floor(Math.random()*POP_ANIMALS.length)];
+  const el=document.createElement('div');
+  el.className='pop-animal';
+  el.textContent=a.em;
+  el.style.left=(8+Math.floor(Math.random()*80))+'vw';
+  el.style.bottom='0';
+  el.style.pointerEvents='auto';
+  el.style.cursor='pointer';
+  el.onclick=()=>{el.remove();openAnimalTask(a);};
+  document.body.appendChild(el);
+  setTimeout(()=>{if(el.parentNode) el.remove();},3200);
+}
+
+// ── Animal pop-up mini task (click a flying animal → letter challenge) ────
+function openAnimalTask(animal){
+  const useFirst=Math.random()<0.5;
+  const word=animal.en;
+  const correct=(useFirst?word[0]:word[word.length-1]).toUpperCase();
+  document.getElementById('atEmoji').textContent=animal.em;
+  document.getElementById('atQuestion').textContent=useFirst
+    ?'מה האות הראשונה של המילה באנגלית? 🤔'
+    :'מה האות האחרונה של המילה באנגלית? 🤔';
+  document.getElementById('atFb').textContent='';
+  const wrong=shuffle(LETTERS.map(l=>l.u).filter(u=>u!==correct)).slice(0,3);
+  const opts=shuffle([correct,...wrong]);
+  const g=document.getElementById('atOpts');
+  g.innerHTML='';
+  opts.forEach(letter=>{
+    const b=document.createElement('button');
+    b.className='btn btn-blue';
+    b.textContent=letter;
+    b.onclick=()=>{
+      g.querySelectorAll('button').forEach(x=>x.disabled=true);
+      if(letter===correct){
+        b.style.background='linear-gradient(135deg,#2ECC71,#1A8A4A)';
+        document.getElementById('atFb').textContent='✅ כל הכבוד!';
+        addStar();
+      } else {
+        b.style.background='linear-gradient(135deg,#E74C3C,#922B21)';
+        g.querySelectorAll('button').forEach(x=>{if(x.textContent===correct) x.style.background='linear-gradient(135deg,#2ECC71,#1A8A4A)';});
+        document.getElementById('atFb').textContent='❌ בפעם הבאה!';
+      }
+      speakEN(word);
+      setTimeout(closeAnimalTask,1400);
+    };
+    g.appendChild(b);
+  });
+  document.getElementById('animalTask').classList.remove('hidden');
+  speakHE(useFirst?'מה האות הראשונה?':'מה האות האחרונה?');
+}
+function closeAnimalTask(){document.getElementById('animalTask').classList.add('hidden');}
+
+// Start after 15s, then every 20-35s
+setTimeout(()=>{
+  spawnCasualAnimal();
+  setInterval(spawnCasualAnimal,20000);
+},15000);
+
+// Unlock speechSynthesis — MUST be called synchronously inside a user-gesture handler.
+// Speak an empty utterance so the browser marks the API as gesture-unlocked.
+function unlockAudio(){
+  try{
+    if(!_ac) _ac=new(window.AudioContext||window.webkitAudioContext)();
+    if(_ac.state==='suspended') _ac.resume();
+  }catch(e){}
+  try{
+    if(window.speechSynthesis){
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+    }
+  }catch(e){}
+}
+
+// Core TTS — pure speechSynthesis, no external URLs
+function _wsa(text,lang,cb){
+  try{
+    if(!window.speechSynthesis){ if(cb) cb(); return; }
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang=lang; u.rate=0.82; u.pitch=1.2; u.volume=1;
+    const base=lang.split('-')[0];
+    const all=voices.filter(x=>x.lang===lang||x.lang.startsWith(base));
+    // Prefer female voice (check name for common indicators)
+    const female=all.find(x=>/female|woman|girl|f\b/i.test(x.name))
+      || all.find(x=>!/male|man|boy/i.test(x.name)&&x) // exclude explicit male
+      || all[0];
+    if(female) u.voice=female;
+    if(cb){ u.onend=cb; u.onerror=e=>{ if(e.error!=='interrupted') cb(); }; }
+    window.speechSynthesis.speak(u);
+  }catch(e){ if(cb) cb(); }
+}
+
+// NOTE: unlockAudio() is intentionally NOT called here on every playback.
+// It cancels + queues a throwaway empty utterance, which — when called before
+// every single word — was racing against _wsa()'s own cancel() and causing
+// choppy/cut-off speech. It only needs to run once, from a user gesture
+// (see the welcome screen button and testSound()).
+function speakEN(text,cb){ _wsa(text,'en-US',cb); }
+function speakHE(text,cb){ _wsa(text,'he-IL',cb); }
+
+// ── Test button
+function testSound(){
+  unlockAudio();
+  _beep(660,0.2);
+  _wsa('Hello Michaela','en-US',()=>{
+    setTimeout(()=>_wsa('שלום מיכאלה','he-IL',null),400);
+  });
+  showToast('🔊 בודק — צריך לשמוע "Hello Michaela"');
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────
+let toastT;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.remove('hidden');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.add('hidden'),3200);
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+// ── CAT MASCOT & TRANSITIONS ──────────────────────────────────────────────
+const CAT_MSGS=[
+  'מיכאלה! 😸','כל הכבוד! 🐾','יופי! 😻','אלופה! 🌟','מדהים! 🐱','וואו! 😺','עוד! 🐾','נהדר! ✨',
+  'את נהדרת! 💖','מצליחה יפה! 🎀','איזה כישרון! 😻','גאה בך! 🥰',
+];
+const TRANSITION_ANIMALS=['🐱','🐶','🐰','🦊','🐸','🐧','🦁','🐯','🦄','🐨'];
+const TRANSITION_MSGS=[
+  'מיכאלה את אלופה! ⭐','כל הכבוד! הלאה! 🚀','מצוין! עוד מילה! 💪','יאללה מיכאלה! 🌟',
+  'מדהימה! המשיכי! ✨','וואו! את ממש טובה! 🏆','כוכבת! 🌟 הלאה!','עוד אחת! את יכולה! 💫',
+  'את נהדרת מיכאלה! 💖','מצליחה יפה מאוד! 🎀','איזו הצלחה! עוד! 🥳','ממש כישרונית! 🌈',
+];
+let catTimer=null;
+let transitionTimer=null;
+
+function showCatMascot(msg){
+  const el=document.getElementById('catMascot');
+  const bubble=document.getElementById('catBubble');
+  bubble.textContent=msg||CAT_MSGS[Math.floor(Math.random()*CAT_MSGS.length)];
+  el.classList.remove('hidden');
+  el.classList.add('visible');
+  clearTimeout(catTimer);
+  catTimer=setTimeout(()=>{
+    el.classList.remove('visible');
+    el.classList.add('hidden');
+  },2200);
+}
+
+function showWordTransition(cb){
+  const ov=document.getElementById('wordTransition');
+  const animal=TRANSITION_ANIMALS[Math.floor(Math.random()*TRANSITION_ANIMALS.length)];
+  const msg=TRANSITION_MSGS[Math.floor(Math.random()*TRANSITION_MSGS.length)];
+  document.getElementById('wtAnimal').textContent=animal;
+  document.getElementById('wtText').textContent=msg;
+  ov.classList.remove('hidden');
+  speakHE(msg);
+  clearTimeout(transitionTimer);
+  transitionTimer=setTimeout(()=>{
+    ov.classList.add('hidden');
+    if(cb) cb();
+  },1800);
+}
+
+// ── SPELL (הרכבת מילים) ──────────────────────────────────────────────────
+// Word source is WORD_LIST.txt, fetched at startup so editing that file alone
+// updates the game. WORD_LIST_FALLBACK is a snapshot of the same file, embedded
+// so the app still works when opened directly (double-click / shared as a lone
+// .html file, no server) — fetch('WORD_LIST.txt') fails from a file:// page in
+// that case and would otherwise leave the spell screen stuck on "loading".
+const WORD_LIST_FALLBACK=`Cook – לבשל
+Eat – לאכול
+Open – לפתוח
+Climb – לטפס
+Glide – לדאות
+Explore – לחקור
+Collect – לאסוף
+Search – לחפש
+Examine – לבחון
+Attack – לתקוף
+Defend – להגן
+Buy – לקנות
+Sell – למכור
+Take – לקחת
+Sword – חרב
+Shield – מגן
+Bow – קשת
+Arrow – חץ
+Bow– חץ וקשת
+Chest – תיבת אוצר
+Inventory – מלאי
+Recipe – מתכון
+Bomb – פצצה
+Hammer – פטיש
+Clock – שעון
+Map – מפה
+Fire – אש
+Ice – קרח
+Cold – קר
+Hot – חם
+Electricity – חשמל
+Iron – ברזל
+Mushroom – פטריה
+Wild – פרא
+Ancient – עתיק
+Ruins – הריסות
+Horse – סוס
+Dog – כלב
+Cat – חתול
+Friend – חבר
+Village – כפר
+Shrine – מקדש
+Stamina – סיבולת
+Power – כוח
+Time – זמן
+Hello – שלום
+Goodbye – ביי
+Strong – חזק
+Weak – חלש
+Rare – נדיר
+Hidden – נסתר
+Huge – עצום
+Dangerous – מסוכן
+Run – לרוץ
+Jump – לקפוץ
+Sleep – לישון
+Wake up – להתעורר
+Save – לשמור / להציל
+Help – לעזור
+Throw – לזרוק
+Water – מים
+Rain – גשם
+Sun – שמש
+Mountain – הר
+Tree – עץ
+Stone – אבן / סלע
+Day – יום
+Night – לילה
+Morning – בוקר
+Noon – צהריים
+Evening – ערב
+Heart – לב
+Apple – תפוח
+Wood – עץ / בול עץ
+Magnet – מגנט
+Key – מפתח
+Door – דלת
+Armor – שריון
+Big – גדול
+Small – קטן
+Fast – מהיר
+Slow – איטי
+Up – למעלה
+Down – למטה
+Brave – אמיץ
+Magic – קסם
+sit - לשבת`;
+let SPELL_WORDS=[];
+let WORD_ROWS=[]; // parsed rows in the source list's original order, kept so the
+                   // words-quiz can regroup+reshuffle fresh each round without
+                   // losing which entries were originally adjacent (same-topic).
+let spellWordsLoaded=false;
+
+// Parses "English – Hebrew" lines. Every entry in WORD_LIST.txt becomes a spell word;
+// a space in the English text (e.g. "Wake up") becomes a non-interactive gap between
+// letter slots rather than being skipped, so the full list is always used as-is.
+function parseWordListText(txt){
+  const rows=[];
+  txt.split('\n').forEach(line=>{
+    const m=line.match(/^\s*(.+?)\s*[–—-]\s*(.+?)\s*$/);
+    if(!m) return;
+    let en=m[1].trim();
+    let he=m[2].trim();
+    en=en.toLowerCase();
+    if(en.length<2) return;
+    if(he.includes('/')) he=he.split('/')[0].trim();
+    rows.push({en,he,em:WORD_EMOJI[en]||'📘'});
+  });
+  return rows;
+}
+
+// Groups sequential entries into small clusters (≤5 words) so thematically-close words
+// from the source list stay together, then shuffles cluster order and each cluster's
+// words — so play order is different every load, but related words still play as a block.
+function groupAndShuffle(words){
+  const groups=[];
+  for(let i=0;i<words.length;i+=5) groups.push(words.slice(i,i+5));
+  return shuffle(groups).map(g=>shuffle(g)).flat();
+}
+
+function loadSpellWords(){
+  fetch('WORD_LIST.txt')
+    .then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.text(); })
+    .catch(()=>WORD_LIST_FALLBACK)
+    .then(txt=>{
+      WORD_ROWS=parseWordListText(txt);
+      SPELL_WORDS=groupAndShuffle(WORD_ROWS);
+      spellWordsLoaded=true;
+      if(!document.getElementById('screen-spell').classList.contains('hidden')) updateSpellDisp();
+    });
+}
+
+let spellIdx=0;
+let spellSlotData=[];
+let spellTarget=[];     // correct uppercase letters for current word
+let spellCorrectCount=0;
+// Hybrid tap-or-drag model: tap a letter tile to pick it up, then tap a box to place it —
+// OR press and drag a tile straight onto a box in one gesture. Pointer Events unify
+// mouse/touch/pen so both interactions share the same pick-up state below.
+let selLetter=null;     // currently picked-up letter, or null
+let selTileEl=null;     // origin tile element, if picked up from the pool
+let selFromSlot=null;   // origin slot index, if picked up from a slot
+let spellExamMode=false;
+let spellExamCorrect=0;
+let spellExamTotal=0;
+
+// Drag tracking — active only between a pointerdown on a tile/slot and its matching pointerup.
+let pointerDownActive=false;
+let dragMoved=false;
+let dragStartX=0,dragStartY=0;
+let dragGhost=null;
+const DRAG_THRESHOLD=18; // px of movement before a press counts as a drag, not a tap —
+                          // generous enough to absorb normal finger jitter during a tap
+
+function createDragGhost(letter,x,y){
+  removeDragGhost();
+  dragGhost=document.createElement('div');
+  dragGhost.className='spell-drag-ghost';
+  dragGhost.textContent=letter;
+  dragGhost.style.left=x+'px';
+  dragGhost.style.top=y+'px';
+  document.body.appendChild(dragGhost);
+}
+function updateDragGhost(x,y){
+  if(dragGhost){ dragGhost.style.left=x+'px'; dragGhost.style.top=y+'px'; }
+}
+function removeDragGhost(){
+  if(dragGhost){ dragGhost.remove(); dragGhost=null; }
+}
+function updateSlotHoverUnder(x,y){
+  document.querySelectorAll('.spell-slot.hover-target').forEach(s=>s.classList.remove('hover-target'));
+  const el=document.elementFromPoint(x,y);
+  const slotEl=el&&el.closest&&el.closest('.spell-slot');
+  if(slotEl&&!slotEl.classList.contains('correct')) slotEl.classList.add('hover-target');
+}
+
+// Begin tracking a press that may turn into a drag. Called right after a pick-up
+// (selectLetter) so pointermove/pointerup on the whole document decide tap vs. drag.
+function beginPointerTracking(e){
+  pointerDownActive=true;
+  dragMoved=false;
+  dragStartX=e.clientX; dragStartY=e.clientY;
+  document.addEventListener('pointermove',onSpellPointerMove);
+  document.addEventListener('pointerup',onSpellPointerUp,{once:true});
+  document.addEventListener('pointercancel',onSpellPointerUp,{once:true});
+}
+function onSpellPointerMove(e){
+  if(!pointerDownActive||selLetter===null) return;
+  const dx=e.clientX-dragStartX,dy=e.clientY-dragStartY;
+  if(!dragMoved&&Math.hypot(dx,dy)>DRAG_THRESHOLD){
+    dragMoved=true;
+    createDragGhost(selLetter,e.clientX,e.clientY);
+  }
+  if(dragMoved){
+    updateDragGhost(e.clientX,e.clientY);
+    updateSlotHoverUnder(e.clientX,e.clientY);
+  }
+}
+function onSpellPointerUp(e){
+  pointerDownActive=false;
+  document.removeEventListener('pointermove',onSpellPointerMove);
+  document.querySelectorAll('.spell-slot.hover-target').forEach(s=>s.classList.remove('hover-target'));
+  if(dragMoved){
+    removeDragGhost();
+    const el=document.elementFromPoint(e.clientX,e.clientY);
+    const slotEl=el&&el.closest&&el.closest('.spell-slot');
+    if(slotEl&&!slotEl.classList.contains('correct')&&selLetter!==null){
+      const idx=parseInt(slotEl.dataset.idx,10);
+      placeLetterInSlot(idx,selLetter,selTileEl);
+      clearSelectionVisuals();
+      selLetter=null; selTileEl=null; selFromSlot=null;
+    }
+    // Released somewhere that isn't a valid box — deliberately NOT calling
+    // cancelSelection() here. On real touch devices a plain tap easily jitters
+    // past DRAG_THRESHOLD and gets misread as a drag; if that drag then "fails"
+    // (lands back on the same tile, say), canceling would silently drop the
+    // pick-up before a second tap ever had a chance to place it. Leaving
+    // selLetter set means a genuine failed drag just falls back to the tap
+    // flow — the next tap on any box still places the letter.
+  }
+  dragMoved=false;
+}
+
+function clearSelectionVisuals(){
+  if(selTileEl) selTileEl.classList.remove('drag-active');
+  document.querySelectorAll('.spell-slot').forEach(s=>s.classList.remove('drag-over'));
+}
+// Abandon the current selection: if it came from a slot, put it back there.
+function cancelSelection(){
+  if(selFromSlot!==null&&selLetter!==null){
+    const s=document.querySelectorAll('.spell-slot')[selFromSlot];
+    if(s){
+      spellSlotData[selFromSlot]=selLetter;
+      s.textContent=selLetter;
+      s.className='spell-slot filled '+(selLetter===spellTarget[selFromSlot]?'correct':'wrong');
+    }
+  }
+  clearSelectionVisuals();
+  selLetter=null; selTileEl=null; selFromSlot=null;
+}
+function selectLetter(letter,tileEl,fromSlotIdx){
+  cancelSelection(); // restore any pending previous selection first
+  selLetter=letter; selTileEl=tileEl; selFromSlot=fromSlotIdx;
+  if(tileEl) tileEl.classList.add('drag-active');
+  speakEN(letter);
+  document.querySelectorAll('.spell-slot').forEach(s=>{if(!s.classList.contains('filled')) s.classList.add('drag-over');});
+}
+
+function updateSpellDisp(){
+  if(!SPELL_WORDS.length) return;
+  selLetter=null; selTileEl=null; selFromSlot=null;
+  const w=SPELL_WORDS[spellIdx%SPELL_WORDS.length];
+  spellTarget=w.en.toUpperCase().split('');
+  document.getElementById('spellEmoji').textContent=w.em;
+  document.getElementById('spellHe').textContent=w.he;
+  document.getElementById('spellFb').textContent='';
+  // Space positions (multi-word entries like "wake up") are pre-filled as gaps —
+  // they need no tile and are never wrong, so they don't block the auto-check.
+  spellSlotData=spellTarget.map(ch=>ch===' '?' ':null);
+  buildSpellSlots(spellTarget);
+  buildSpellTiles(spellTarget);
+  const tot=SPELL_WORDS.length,done=spellIdx%tot;
+  document.getElementById('spellBar').style.width=(done/tot*100)+'%';
+  document.getElementById('spellProg').textContent=`מילה ${(spellIdx%tot)+1} מתוך ${tot}`;
+  document.getElementById('spellScoreBadge').textContent=`⭐ ${spellCorrectCount}`;
+}
+
+// Word audio is English-only — the Hebrew meaning is always shown as text, never spoken.
+function speakSpellWord(){
+  const w=SPELL_WORDS[spellIdx%SPELL_WORDS.length];
+  speakEN(w.en);
+}
+
+function buildSpellSlots(target){
+  const c=document.getElementById('spellSlots');
+  c.innerHTML='';
+  for(let i=0;i<target.length;i++){
+    if(target[i]===' '){
+      const gap=document.createElement('div');
+      gap.className='spell-gap';
+      c.appendChild(gap);
+      continue;
+    }
+    const s=document.createElement('div');
+    s.className='spell-slot';
+    s.dataset.idx=i;
+    // Press a box: place an already-picked-up letter here immediately, or (if nothing
+    // picked up) pick this box's own letter up — which may then be tapped elsewhere or dragged.
+    // Locked once correct, so a stray tap/drag can't undo a right answer.
+    s.addEventListener('pointerdown',e=>{
+      if(s.classList.contains('correct')) return;
+      e.preventDefault();
+      if(selLetter!==null){
+        placeLetterInSlot(i,selLetter,selTileEl);
+        clearSelectionVisuals();
+        selLetter=null; selTileEl=null; selFromSlot=null;
+      } else if(spellSlotData[i]!==null){
+        const letter=spellSlotData[i];
+        spellSlotData[i]=null;
+        s.textContent=''; s.className='spell-slot';
+        selectLetter(letter,null,i);
+        beginPointerTracking(e);
+      }
+    });
+    c.appendChild(s);
+  }
+}
+
+function buildSpellTiles(letters){
+  const c=document.getElementById('spellTiles');
+  c.innerHTML='';
+  letters=letters.filter(l=>l!==' '); // gaps aren't tiles
+  const alpha='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const distractors=shuffle([...alpha].filter(l=>!letters.includes(l))).slice(0,2);
+  const allTiles=shuffle([...letters,...distractors]);
+  allTiles.forEach((letter,i)=>{
+    const t=document.createElement('div');
+    t.className='spell-tile';
+    t.textContent=letter;
+    t.dataset.tileIdx=i;
+    t.dataset.letter=letter;
+    t.addEventListener('pointerdown',e=>{
+      if(t.classList.contains('used')) return;
+      e.preventDefault();
+      if(selTileEl===t){ cancelSelection(); return; } // tap same tile again → deselect
+      selectLetter(letter,t,null);
+      beginPointerTracking(e);
+    });
+    c.appendChild(t);
+  });
+}
+
+function placeLetterInSlot(idx,letter,tileEl){
+  const slot=document.querySelectorAll('.spell-slot')[idx];
+  if(!slot) return;
+  if(spellSlotData[idx]!==null) returnLetterToTile(spellSlotData[idx]);
+  spellSlotData[idx]=letter;
+  slot.textContent=letter;
+  const correct=letter===spellTarget[idx];
+  slot.className='spell-slot filled '+(correct?'correct':'wrong');
+  if(tileEl) tileEl.classList.add('used');
+  speakEN(letter);
+  document.getElementById('spellFb').textContent='';
+  // Auto-check when all filled
+  if(spellSlotData.every(l=>l!==null)){
+    const allOk=spellSlotData.every((l,i)=>l===spellTarget[i]);
+    if(allOk) setTimeout(checkSpell,350);
+  }
+}
+
+function returnLetterToTile(letter){
+  for(const t of document.querySelectorAll('.spell-tile')){
+    if(t.dataset.letter===letter&&t.classList.contains('used')){
+      t.classList.remove('used','drag-active'); break;
+    }
+  }
+}
+
+function clearSpellSlots(){
+  clearSelectionVisuals();
+  selLetter=null; selTileEl=null; selFromSlot=null;
+  spellSlotData=spellSlotData.map(()=>null);
+  document.querySelectorAll('.spell-slot').forEach(s=>{s.textContent='';s.className='spell-slot';});
+  document.querySelectorAll('.spell-tile').forEach(t=>t.classList.remove('used','drag-active'));
+  document.getElementById('spellFb').textContent='';
+}
+
+function checkSpell(){
+  if(!spellSlotData.every(l=>l!==null)){document.getElementById('spellFb').textContent='⚠️ מלאי את כל התיבות!';return;}
+  const allOk=spellSlotData.every((l,i)=>l===spellTarget[i]);
+  // Re-color all slots
+  document.querySelectorAll('.spell-slot').forEach((s,i)=>{
+    s.className='spell-slot filled '+(spellSlotData[i]===spellTarget[i]?'correct':'wrong');
+  });
+  if(allOk){
+    document.getElementById('spellFb').textContent='✅ מצוין! כתבת נכון!';
+    spellCorrectCount++;
+    if(spellExamMode) spellExamCorrect++;
+    addStar();
+    showCatMascot('מיכאלה! כתבת נכון! 😻');
+    speakEN(SPELL_WORDS[spellIdx%SPELL_WORDS.length].en);
+    setTimeout(()=>showWordTransition(()=>nextSpellWord()),800);
+  } else {
+    document.getElementById('spellFb').textContent='❌ יש אותיות לא נכונות — נסי שוב!';
+    speakEN(SPELL_WORDS[spellIdx%SPELL_WORDS.length].en);
+  }
+}
+
+function nextSpellWord(){
+  spellIdx++;
+  if(spellExamMode&&spellIdx>=spellExamTotal+spellExamStart){endSpellExam();return;}
+  updateSpellDisp();
+}
+
+let spellExamStart=0;
+function endSpellExam(){
+  spellExamMode=false; examType='spell'; examScore=spellExamCorrect;
+  examQs=new Array(spellExamTotal);
+  showResults();
+}
+
+// ── EXAM ──────────────────────────────────────────────────────────────────
+let examType='';
+let examQs=[];
+let examIdx=0;
+let examScore=0;
+
+const EXAM_TITLES={letters:'📝 מבחן אותיות',spell:'📝 מבחן הרכבה',words:'🎯 התאמת מילים'};
+
+function startExam(type){
+  examType=type;
+  examIdx=0;
+  examScore=0;
+  if(type==='letters'){
+    examQs=shuffle([...LETTERS]).slice(0,15);
+  } else if(type==='spell'){
+    // Spell exam: run through the spell screen itself for a fixed number of words
+    spellExamMode=true;spellExamCorrect=0;spellExamTotal=8;
+    spellExamStart=spellIdx;
+    examQs=new Array(8);
+    showScreen('spell');return;
+  } else if(type==='words'){
+    if(!spellWordsLoaded){ showToast('⏳ טוענת מילים... נסי שוב בעוד רגע'); return; }
+    // Every word in the list, freshly regrouped+reshuffled each round (same
+    // topic-cluster logic as the spelling game) rather than a fixed subset.
+    examQs=groupAndShuffle(WORD_ROWS);
+  }
+  document.getElementById('examTitle').textContent=EXAM_TITLES[type]||'📝 מבחן';
+  showScreen('exam');
+  showExamQ();
+}
+
+const capWord=w=>w.charAt(0).toUpperCase()+w.slice(1);
+
+function showExamQ(){
+  if(examIdx>=examQs.length){showResults();return;}
+  const q=examQs[examIdx];
+  window._curExamQ=q;
+  const total=examQs.length;
+  document.getElementById('examQNum').textContent=`שאלה ${examIdx+1} מתוך ${total}`;
+  document.getElementById('examScoreBadge').textContent=`✅ ${examScore}`;
+  document.getElementById('examBar').style.width=(examIdx/total*100)+'%';
+  document.getElementById('examFb').textContent='';
+  document.getElementById('examNext').style.display='none';
+  document.getElementById('examOpts').innerHTML='';
+  // Replay button speaks q.he, which for letters contains the English example word — would give away the answer
+  document.getElementById('examReplay').style.display=examType==='letters'?'none':'';
+
+  if(examType==='words'){
+    document.getElementById('examEmoji').textContent=q.em;
+    document.getElementById('examHe').textContent=q.he;
+    document.getElementById('examPrompt').textContent='לחצי על המילה הנכונה באנגלית 👇';
+    const others=[...new Set(WORD_ROWS.map(w=>w.en))].filter(en=>en!==q.en);
+    const wrong=shuffle(others).slice(0,2);
+    const opts=shuffle([q.en,...wrong]);
+    buildExamOpts(opts.map(capWord), label=>label.toLowerCase()===q.en, ()=>speakEN(q.en));
+    return;
+  }
+
+  document.getElementById('examEmoji').textContent=q.em;
+  document.getElementById('examHe').textContent='';
+  document.getElementById('examPrompt').textContent='מהי האות הראשונה של המילה באנגלית?';
+  const wrong=shuffle(LETTERS.filter(l=>l.u!==q.u)).slice(0,3);
+  const opts=shuffle([q,...wrong]);
+  buildExamOpts(opts.map(o=>o.u), ans=>ans===q.u, ()=>speakEN(q.u+'. '+q.ex));
+}
+
+function buildExamOpts(labels, isCorrect, onReveal){
+  const g=document.getElementById('examOpts');
+  g.innerHTML='';
+  g.style.gridTemplateColumns=labels.length===3?'1fr 1fr 1fr':'';
+  const longLabels=labels.some(l=>l.length>6);
+  labels.forEach(label=>{
+    const b=document.createElement('button');
+    b.className='btn btn-blue';
+    b.style.cssText=`min-width:0;font-size:${longLabels?'.82rem':'1rem'};padding:12px 6px;border-radius:14px`;
+    b.textContent=label;
+    b.onclick=()=>{
+      g.querySelectorAll('button').forEach(x=>x.disabled=true);
+      if(isCorrect(label)){
+        b.style.background='linear-gradient(135deg,#2ECC71,#1A8A4A)';
+        document.getElementById('examFb').textContent='✅ כל הכבוד!';
+        examScore++;
+        addStar();
+      } else {
+        b.style.background='linear-gradient(135deg,#E74C3C,#922B21)';
+        g.querySelectorAll('button').forEach(x=>{if(isCorrect(x.textContent)) x.style.background='linear-gradient(135deg,#2ECC71,#1A8A4A)';});
+        document.getElementById('examFb').textContent='❌ לא נכון';
+      }
+      onReveal();
+      const nb=document.getElementById('examNext');
+      nb.textContent='הבאה ➡️';
+      nb.style.display='block';
+      nb.onclick=()=>{examIdx++;showExamQ();};
+    };
+    g.appendChild(b);
+  });
+}
+
+function showResults(){
+  const total=examQs.length;
+  const pct=Math.round(examScore/total*100);
+  let grade,col,emoji,msg;
+  if(pct===100){grade='💯';col='#FFD700';emoji='💎';msg='מושלמת לחלוטין!\nמיכאלה את גאונית! 🌟';}
+  else if(pct>=90){grade='A+';col='#FFD700';emoji='🏆';msg='מצוין מאד!\nכל הכבוד מיכאלה! ⭐';}
+  else if(pct>=80){grade='A';col='#2ECC71';emoji='🥇';msg='מצוין!\nעבודה נהדרת מיכאלה! 🌟';}
+  else if(pct>=70){grade='B';col='#3498DB';emoji='🥈';msg='טוב מאד!\nכמעט מושלם! 💪';}
+  else if(pct>=60){grade='C';col='#E67E22';emoji='🥉';msg='טוב!\nהמשיכי להתאמן! 💪';}
+  else{grade='D';col='#E74C3C';emoji='💪';msg='נסי שוב!\nתרגלי עוד קצת! 📚';}
+
+  document.getElementById('resEmoji').textContent=emoji;
+  const gl=document.getElementById('resGrade');
+  gl.textContent=grade;gl.style.color=col;
+  document.getElementById('resScore').textContent=`${examScore} / ${total} נכון`;
+  document.getElementById('resPct').textContent=`${pct}%`;
+  document.getElementById('resMsg').textContent=msg;
+  document.getElementById('resStars').textContent=`⭐ +${examScore} כוכבים הרווחת!`;
+  const backMap={letters:'letters',spell:'spell'};
+  document.getElementById('resTryAgain').onclick=()=>startExam(examType);
+  document.getElementById('resBack').onclick=()=>showScreen(backMap[examType]||'menu');
+  showScreen('results');
+  if(pct>=70){
+    setTimeout(()=>{launchConfetti();speakHE(msg.replace(/[💯🏆🥇🥈🥉💪⭐🌟📚]/g,''));},350);
+    setTimeout(()=>showCatMascot('מיכאלה! 😻 כל הכבוד!'),1200);
+  } else {
+    setTimeout(()=>speakHE(msg.replace(/[💯🏆🥇🥈🥉💪⭐🌟📚]/g,'')),350);
+    setTimeout(()=>showCatMascot('נסי שוב! 🐾 את יכולה!'),800);
+  }
+}
+
+// ── START ─────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
