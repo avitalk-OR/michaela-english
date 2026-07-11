@@ -501,6 +501,10 @@ function showScreen(name){
     next.classList.add('screen-fade'); // start invisible...
     void next.offsetWidth; // ...force layout so the browser registers that state...
     next.classList.remove('screen-fade'); // ...then transition to visible
+    // Spell/exam screens have their own (green) score badge in the header —
+    // hide the global gold one there so the same number isn't shown twice.
+    const globalStars=document.getElementById('globalStars');
+    if(globalStars) globalStars.style.display=(name==='spell'||name==='exam')?'none':'flex';
     if(name==='spell'){
       if(spellWordsLoaded) updateSpellDisp();
       else {
