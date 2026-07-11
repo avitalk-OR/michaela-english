@@ -55,7 +55,7 @@
   // blob: URL. Real absolute URLs are baked in below because inside the worker's own
   // scope, `self.location` would otherwise resolve against that meaningless blob: address.
   const SW_SOURCE=`
-    const CACHE_NAME='michaela-eng-v2';
+    const CACHE_NAME='michaela-eng-v3';
     const PAGE_URL=${JSON.stringify(pageURL)};
     const ASSETS=${JSON.stringify([pageURL,wordListURL])};
     self.addEventListener('install',e=>{
