@@ -739,9 +739,16 @@ function pickVoice(lang){
   const exact=voices.filter(x=>x.lang===lang);
   const pool=exact.length?exact:voices.filter(x=>x.lang.startsWith(base));
   if(!pool.length) return null;
+  // Named voices known to be clear, natural neural TTS across the browsers/OSes
+  // this runs on — Apple's Samantha, Chrome's Google voices, Edge's newer
+  // "Online (Natural)" voices (Aria/Jenny/Guy). Deliberately NOT matching
+  // Zira/David — the classic bundled Windows voices — those are the compact,
+  // more robotic-sounding ones this whole ranking is trying to avoid.
+  const PREMIUM=/samantha|google (us )?english|natural|\baria\b|\bjenny\b|\bguy\b/i;
   const score=v=>{
     let s=0;
     if(v.localService===false) s+=2; // cloud/neural voice — usually much clearer
+    if(PREMIUM.test(v.name)) s+=2;
     if(/female|woman|girl/i.test(v.name)) s+=1;
     else if(/male|man|boy/i.test(v.name)) s-=1;
     return s;
@@ -753,20 +760,34 @@ function pickVoice(lang){
 function _wsa(text,lang,cb){
   try{
     if(!window.speechSynthesis){ if(cb) cb(); return; }
-    window.speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(text);
     const isEn=lang.startsWith('en');
-    u.lang=lang; u.volume=1;
-    // English gets a slightly slower rate and a near-natural pitch — kids
-    // learning pronunciation need clarity more than the cuter high-pitched
-    // voice, and heavy pitch-shifting can itself blur articulation on
-    // lower-quality engines.
-    u.rate=isEn?0.8:0.82;
-    u.pitch=isEn?1.05:1.2;
-    const voice=pickVoice(lang);
-    if(voice) u.voice=voice;
-    if(cb){ u.onend=cb; u.onerror=e=>{ if(e.error!=='interrupted') cb(); }; }
-    window.speechSynthesis.speak(u);
+    // A trailing period gives a single bare word (no punctuation of its own)
+    // a natural, complete falling intonation instead of the flat or
+    // question-like rise many engines default to otherwise.
+    const spoken=isEn&&!/[.!?]$/.test(text)?text+'.':text;
+    const speakNow=()=>{
+      const u=new SpeechSynthesisUtterance(spoken);
+      u.lang=lang; u.volume=1;
+      // English gets a slightly slower rate for clarity. Pitch stays fully
+      // natural (1.0) rather than pitch-shifted — any shift requires signal
+      // processing that can itself blur articulation on lower-quality engines.
+      u.rate=isEn?0.8:0.82;
+      u.pitch=isEn?1:1.2;
+      const voice=pickVoice(lang);
+      if(voice) u.voice=voice;
+      if(cb){ u.onend=cb; u.onerror=e=>{ if(e.error!=='interrupted') cb(); }; }
+      window.speechSynthesis.speak(u);
+    };
+    // Chrome noticeably stalls a speak() called right after cancel() — even
+    // a cancel() with nothing to actually cancel adds that delay. Skip it
+    // entirely in the common case (nothing currently playing/queued); only
+    // cancel-then-wait-a-beat when there's something real to interrupt.
+    if(window.speechSynthesis.speaking||window.speechSynthesis.pending){
+      window.speechSynthesis.cancel();
+      setTimeout(speakNow,50);
+    } else {
+      speakNow();
+    }
   }catch(e){ if(cb) cb(); }
 }
 
