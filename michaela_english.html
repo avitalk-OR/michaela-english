@@ -603,6 +603,13 @@ function addStar(){
   updateStarsDisp();
   floatStar();
 }
+// Mirrors addStar() for a wrong guess — clamped at 0 so the running total
+// never shows something confusing like a negative star count.
+function loseStar(){
+  totalStars=Math.max(0,totalStars-1);
+  localStorage.setItem('mk_stars_'+currentProfile,totalStars);
+  updateStarsDisp();
+}
 // One shared, cumulative score — every badge in the app (global corner, spell
 // screen, exam/words screen) always shows this same number, not a separate
 // per-game tally, so there's only ever one running score in the whole game.
@@ -1521,10 +1528,14 @@ function buildWordsOpts(containerId, labels, correctLabel, onDone, onCorrect){
         b.style.background='linear-gradient(135deg,#E74C3C,#922B21)';
         b.style.opacity='.4';
         attempt=2;
+        loseStar();
+        examScore=Math.max(0,examScore-1);
       } else {
         g.querySelectorAll('button').forEach(x=>x.disabled=true);
         b.style.background='linear-gradient(135deg,#E74C3C,#922B21)';
         g.querySelectorAll('button').forEach(x=>{if(x.textContent===correctLabel) x.style.background='linear-gradient(135deg,#2ECC71,#1A8A4A)';});
+        loseStar();
+        examScore=Math.max(0,examScore-1);
         onDone(0);
       }
     };
