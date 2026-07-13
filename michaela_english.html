@@ -739,16 +739,18 @@ function pickVoice(lang){
   const exact=voices.filter(x=>x.lang===lang);
   const pool=exact.length?exact:voices.filter(x=>x.lang.startsWith(base));
   if(!pool.length) return null;
-  // Named voices known to be clear, natural neural TTS across the browsers/OSes
-  // this runs on — Apple's Samantha, Chrome's Google voices, Edge's newer
-  // "Online (Natural)" voices (Aria/Jenny/Guy). Deliberately NOT matching
-  // Zira/David — the classic bundled Windows voices — those are the compact,
-  // more robotic-sounding ones this whole ranking is trying to avoid.
-  const PREMIUM=/samantha|google (us )?english|natural|\baria\b|\bjenny\b|\bguy\b/i;
+  // Speed over marginal clarity: most of the nicer-sounding named voices
+  // (Google's, Edge's Aria/Jenny/Guy "Online" voices) are network/cloud
+  // voices with real round-trip latency before audio starts — that's a
+  // startup delay no JS scheduling trick can fix, since the wait is the
+  // browser making a network request. So this now explicitly PREFERS
+  // localService voices (instant, no network round-trip) and only uses a
+  // name match for Samantha, which is Apple's actually-local high-quality
+  // voice — not a stand-in for "sounds nice," since that usually means network.
   const score=v=>{
     let s=0;
-    if(v.localService===false) s+=2; // cloud/neural voice — usually much clearer
-    if(PREMIUM.test(v.name)) s+=2;
+    if(v.localService===true) s+=2;
+    if(/samantha/i.test(v.name)) s+=1;
     if(/female|woman|girl/i.test(v.name)) s+=1;
     else if(/male|man|boy/i.test(v.name)) s-=1;
     return s;
