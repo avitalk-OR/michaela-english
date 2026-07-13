@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>מיכאלה לומדת אנגלית! 🌟</title>
+<title>מיכאלה ואלון לומדים אנגלית! 🌟</title>
 <script>
 // ── PWA SETUP (manifest + service worker, generated in-page so the app stays
 // a single HTML file) ───────────────────────────────────────────────────────
@@ -29,8 +29,8 @@
   const pageURL=location.href;
   const scopeURL=new URL('./',location.href).href;
   const manifest={
-    name:'מיכאלה לומדת אנגלית',
-    short_name:'מיכאלה אנגלית',
+    name:'מיכאלה ואלון לומדים אנגלית',
+    short_name:'לומדים אנגלית',
     start_url:pageURL,
     scope:scopeURL,
     display:'standalone',
@@ -244,7 +244,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 <body>
 
 <!-- Global score badge (always visible, same spot on every screen) -->
-<div id="globalStars" style="position:fixed;top:10px;left:10px;z-index:300;background:rgba(0,0,0,.45);border:2px solid gold;color:#fff;padding:8px 16px;border-radius:30px;font-size:1rem;font-weight:700;display:flex;align-items:center;gap:6px" title="ניקוד">⭐ <span id="starsDispGlobal">0</span></div>
+<div id="globalStars" style="position:fixed;top:10px;left:10px;z-index:300;background:rgba(0,0,0,.45);border:2px solid gold;color:#fff;padding:8px 16px;border-radius:30px;font-size:1rem;font-weight:700;display:none;align-items:center;gap:6px" title="ניקוד">⭐ <span id="starsDispGlobal">0</span></div>
 
 <div class="stars-bg" id="starsBg"></div>
 <div class="confetti-c" id="confettiC"></div>
@@ -260,14 +260,14 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 
 <!-- CAT MASCOT -->
 <div id="catMascot" class="hidden">
-  <div class="cat-bubble" id="catBubble">מיכאלה! 😸</div>
-  <span class="cat-body">🐱</span>
+  <div class="cat-bubble" id="catBubble"></div>
+  <span class="cat-body" id="catBody">🐱</span>
 </div>
 
 <!-- WORD TRANSITION -->
 <div class="word-transition hidden" id="wordTransition">
   <div class="wt-animal" id="wtAnimal">🐱</div>
-  <div class="wt-text" id="wtText">מיכאלה את כוכבת! ⭐</div>
+  <div class="wt-text" id="wtText"></div>
 </div>
 
 <!-- ADD WORD -->
@@ -278,7 +278,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
     <input id="newWordHe" type="text" placeholder="תרגום בעברית" dir="rtl" style="width:100%;padding:12px;border-radius:14px;border:2px solid rgba(255,255,255,.4);background:rgba(255,255,255,.12);color:#fff;font-size:1.1rem;margin-bottom:6px;text-align:center">
     <div id="addWordFb" style="min-height:24px;font-size:.9rem;direction:rtl;font-weight:700;margin-bottom:8px"></div>
     <div style="display:flex;gap:10px;justify-content:center">
-      <button class="btn btn-green btn-sm" onclick="submitNewWord()">✅ הוסיפי</button>
+      <button class="btn btn-green btn-sm" onclick="submitNewWord()" data-fem="✅ הוסיפי" data-masc="✅ הוסף">✅ הוסיפי</button>
       <button class="btn btn-purple btn-sm" onclick="closeAddWord()">ביטול</button>
     </div>
   </div>
@@ -287,9 +287,12 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 <!-- WELCOME -->
 <div class="screen" id="screen-welcome">
   <div class="w-crown">👑</div>
-  <div class="w-title">שלום מיכאלה!</div>
-  <div class="w-sub">בואי ללמוד אנגלית ביחד 🎀</div>
-  <button class="btn btn-pink" style="margin-top:18px" onclick="speechSynthesis.speak(new SpeechSynthesisUtterance(''));unlockAudio();showScreen('menu');setTimeout(()=>showCatMascot('מיכאלה! 😸 יאללה!'),600)">בואי נתחיל! 🚀</button>
+  <div class="w-title">שלום מיכאלה ואלון!</div>
+  <div class="w-sub">מי משחק/ת היום? 🎀</div>
+  <div style="display:flex;gap:16px;margin-top:22px;flex-wrap:wrap;justify-content:center">
+    <button class="btn btn-pink" onclick="selectProfile('michaela')">👧 מיכאלה</button>
+    <button class="btn btn-blue" onclick="selectProfile('alon')">👦 אלון</button>
+  </div>
 </div>
 
 <!-- MENU -->
@@ -301,7 +304,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
     <div class="menu-card" onclick="showScreen('spell')"><div class="mc-icon">🔡</div><div class="mc-label">הרכבת מילים<br>⚔️ 🍎</div></div>
     <div class="menu-card" onclick="startExam('words')"><div class="mc-icon">🎯</div><div class="mc-label">התאמת מילים<br>📖 🔊</div></div>
   </div>
-  <button class="btn btn-blue btn-sm" id="addWordBtn" style="margin-top:18px" onclick="openAddWord()">➕ הוסיפי מילה חדשה</button>
+  <button class="btn btn-blue btn-sm" id="addWordBtn" style="margin-top:18px" onclick="openAddWord()" data-fem="➕ הוסיפי מילה חדשה" data-masc="➕ הוסף מילה חדשה">➕ הוסיפי מילה חדשה</button>
   <button class="btn btn-purple btn-sm" id="resetScoreBtn" style="margin-top:10px" onclick="confirmResetScore()">🔄 איפוס ניקוד</button>
 </div>
 
@@ -341,15 +344,15 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
   <div class="spell-card">
     <div id="spellEmoji" style="font-size:4rem;margin-bottom:6px">🐱</div>
     <div id="spellHe" style="font-size:1.95rem;direction:rtl;margin-bottom:4px;font-weight:600">חתול</div>
-    <div style="font-size:.85rem;opacity:.65;direction:rtl;margin-bottom:2px">גררי אות לתיבה, או הקישי עליה ואז על התיבה 👇</div>
-    <button class="aud-btn" onclick="speakSpellWord()" style="margin-bottom:8px">🔊 שמעי</button>
+    <div style="font-size:.85rem;opacity:.65;direction:rtl;margin-bottom:2px" data-fem="גררי אות לתיבה, או הקישי עליה ואז על התיבה 👇" data-masc="גרור אות לתיבה, או הקש עליה ואז על התיבה 👇">גררי אות לתיבה, או הקישי עליה ואז על התיבה 👇</div>
+    <button class="aud-btn" onclick="speakSpellWord()" style="margin-bottom:8px" data-fem="🔊 שמעי" data-masc="🔊 שמע">🔊 שמעי</button>
     <div class="spell-slots" id="spellSlots"></div>
     <div class="spell-fb" id="spellFb"></div>
     <div class="spell-tiles" id="spellTiles"></div>
     <div class="spell-word-nav">
-      <button class="btn btn-blue btn-sm" onclick="clearSpellSlots()">🔄 נקי</button>
-      <button class="btn btn-green btn-sm" onclick="checkSpell()">✅ בדקי</button>
-      <button class="btn btn-purple btn-sm" onclick="nextSpellWord()">דלגי ⏭️</button>
+      <button class="btn btn-blue btn-sm" onclick="clearSpellSlots()" data-fem="🔄 נקי" data-masc="🔄 נקה">🔄 נקי</button>
+      <button class="btn btn-green btn-sm" onclick="checkSpell()" data-fem="✅ בדקי" data-masc="✅ בדוק">✅ בדקי</button>
+      <button class="btn btn-purple btn-sm" onclick="nextSpellWord()" data-fem="דלגי ⏭️" data-masc="דלג ⏭️">דלגי ⏭️</button>
     </div>
   </div>
   <div class="prog-bar"><div class="prog-fill" id="spellBar" style="width:0%"></div></div>
@@ -369,11 +372,11 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
     <div id="examEmoji" style="font-size:4.2rem;margin-bottom:10px">🍎</div>
     <div id="examHe" style="font-size:1.8rem;direction:rtl;margin-bottom:4px;min-height:28px;font-weight:600"></div>
     <div id="examPrompt" style="font-size:.85rem;opacity:.7;direction:rtl;margin-bottom:8px"></div>
-    <button class="aud-btn" id="examReplay" style="margin:0 auto 8px;display:block" onclick="if(window._curExamQ){var q=window._curExamQ;examType==='words'?speakEN(q.en):speakHE(q.he||q.ex||'')}" title="שמעי שוב 🔊">🔊</button>
+    <button class="aud-btn" id="examReplay" style="margin:0 auto 8px;display:block" onclick="if(window._curExamQ){var q=window._curExamQ;examType==='words'?speakEN(q.en):speakHE(q.he||q.ex||'')}" data-fem-title="שמעי שוב 🔊" data-masc-title="שמע שוב 🔊" title="שמעי שוב 🔊">🔊</button>
     <div class="quiz-opts" id="examOpts"></div>
-    <div id="wordsEnLabel" style="display:none;font-size:.85rem;opacity:.75;direction:rtl;margin:8px 0 4px">בחרי את המילה הנכונה באנגלית 🇬🇧</div>
+    <div id="wordsEnLabel" style="display:none;font-size:.85rem;opacity:.75;direction:rtl;margin:8px 0 4px" data-fem="בחרי את המילה הנכונה באנגלית 🇬🇧" data-masc="בחר את המילה הנכונה באנגלית 🇬🇧">בחרי את המילה הנכונה באנגלית 🇬🇧</div>
     <div class="quiz-opts" id="examOptsEn"></div>
-    <div id="wordsHeLabel" style="display:none;font-size:.85rem;opacity:.75;direction:rtl;margin:12px 0 4px">בחרי את המילה הנכונה בעברית 🇮🇱</div>
+    <div id="wordsHeLabel" style="display:none;font-size:.85rem;opacity:.75;direction:rtl;margin:12px 0 4px" data-fem="בחרי את המילה הנכונה בעברית 🇮🇱" data-masc="בחר את המילה הנכונה בעברית 🇮🇱">בחרי את המילה הנכונה בעברית 🇮🇱</div>
     <div class="quiz-opts" id="examOptsHe"></div>
     <div id="examFb" style="font-size:1.15rem;min-height:34px;direction:rtl;font-weight:700;margin-top:8px"></div>
     <button class="btn btn-pink btn-sm" id="examNext" style="display:none;margin-top:12px" onclick="examIdx++;showExamQ()">הבאה ➡️</button>
@@ -393,7 +396,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
   <div class="res-msg" id="resMsg"></div>
   <div class="res-stars" id="resStars"></div>
   <div class="res-btns">
-    <button class="btn btn-green btn-sm" id="resTryAgain">נסי שוב 🔄</button>
+    <button class="btn btn-green btn-sm" id="resTryAgain" data-fem="נסי שוב 🔄" data-masc="נסה שוב 🔄">נסי שוב 🔄</button>
     <button class="btn btn-purple btn-sm" id="resBack">חזרה ⬅️</button>
     <button class="btn btn-yellow btn-sm" onclick="showScreen('menu')">תפריט 🏠</button>
   </div>
@@ -462,12 +465,24 @@ const CELEBRATIONS=[
 
 // ── STATE ─────────────────────────────────────────────────────────────────
 let ltrIdx=0;
-let totalStars=parseInt(localStorage.getItem('mk_stars')||'0');
+let currentProfile=null; // 'michaela' | 'alon' — chosen on the welcome screen; nothing
+                          // profile-specific (score, gendered text) is available before that.
+let totalStars=0; // loaded from the per-profile key once selectProfile() runs
+
+// ── GENDER (profile) ─────────────────────────────────────────────────────
+// The whole app was originally written addressing Michaela (feminine Hebrew
+// grammar). Every gendered string now goes through T(fem,masc) — or picks
+// from an *_M/*_F pair — instead of being hardcoded feminine.
+const isMasc=()=>currentProfile==='alon';
+const T=(fem,masc)=>isMasc()?masc:fem;
+const heName=()=>isMasc()?'אלון':'מיכאלה';
+const MASCOT_EMOJIS_F=['🐱','🐶','🦆','🐤'];
+const MASCOT_EMOJIS_M=['⚽','🏀','🏐','🎾'];
+const mascotEmojis=()=>isMasc()?MASCOT_EMOJIS_M:MASCOT_EMOJIS_F;
 
 // ── INIT ──────────────────────────────────────────────────────────────────
 function init(){
   makeBgStars();
-  updateStarsDisp();
   buildLtrGrid();
   updateLtrDisp();
   loadSpellWords();
@@ -477,6 +492,35 @@ function init(){
       if(e.key==='ArrowLeft') prevLtr();
     }
   });
+}
+
+// Sweeps every element tagged with data-fem/data-masc (or the -title variants,
+// for tooltips) and sets its text/title to match the chosen profile. Static
+// HTML labels are tagged this way instead of being built in JS, since most of
+// them never change again after this one pass at profile-selection time.
+function applyGenderTexts(){
+  const masc=isMasc();
+  document.querySelectorAll('[data-fem]').forEach(el=>{
+    el.textContent=masc?el.dataset.masc:el.dataset.fem;
+  });
+  document.querySelectorAll('[data-fem-title]').forEach(el=>{
+    el.title=masc?el.dataset.mascTitle:el.dataset.femTitle;
+  });
+}
+
+// Chosen once on the welcome screen. Loads that profile's own star total
+// (each of the two has a separate running score) and switches every gendered
+// string in the app over before the menu — the score badge itself is only
+// ever shown from here on, never on the profile-picker screen.
+function selectProfile(name){
+  currentProfile=name;
+  totalStars=parseInt(localStorage.getItem('mk_stars_'+name)||'0');
+  applyGenderTexts();
+  updateStarsDisp();
+  speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+  unlockAudio();
+  showScreen('menu');
+  setTimeout(()=>showCatMascot(T('מיכאלה! 😸 יאללה!','אלון! 😸 יאללה!')),600);
 }
 
 function makeBgStars(){
@@ -508,7 +552,7 @@ function showScreen(name){
       if(spellWordsLoaded) updateSpellDisp();
       else {
         document.getElementById('spellEmoji').textContent='⏳';
-        document.getElementById('spellHe').textContent='טוענת מילים...';
+        document.getElementById('spellHe').textContent=T('טוענת מילים...','טוען מילים...');
         document.getElementById('spellSlots').innerHTML='';
         document.getElementById('spellTiles').innerHTML='';
       }
@@ -560,7 +604,7 @@ function speakLetterHe(){speakHE(LETTERS[ltrIdx].he);}
 // ── STARS ─────────────────────────────────────────────────────────────────
 function addStar(){
   totalStars++;
-  localStorage.setItem('mk_stars',totalStars);
+  localStorage.setItem('mk_stars_'+currentProfile,totalStars);
   updateStarsDisp();
   floatStar();
 }
@@ -593,13 +637,13 @@ function confirmResetScore(){
     btn.dataset.confirming='';
     btn.textContent='🔄 איפוס ניקוד';
     totalStars=0;
-    localStorage.setItem('mk_stars',totalStars);
+    localStorage.setItem('mk_stars_'+currentProfile,totalStars);
     updateStarsDisp();
     showToast('הניקוד אופס! 🔄');
     return;
   }
   btn.dataset.confirming='1';
-  btn.textContent='בטוחה? לחצי שוב לאיפוס ⚠️';
+  btn.textContent=T('בטוחה? לחצי שוב לאיפוס ⚠️','בטוח? לחץ שוב לאיפוס ⚠️');
   clearTimeout(resetConfirmTimer);
   resetConfirmTimer=setTimeout(()=>{
     btn.dataset.confirming='';
@@ -751,23 +795,36 @@ function shuffle(arr){
 }
 
 // ── CAT MASCOT & TRANSITIONS ──────────────────────────────────────────────
-const CAT_MSGS=[
+const CAT_MSGS_F=[
   'מיכאלה! 😸','כל הכבוד! 🐾','יופי! 😻','אלופה! 🌟','מדהים! 🐱','וואו! 😺','עוד! 🐾','נהדר! ✨',
   'את נהדרת! 💖','מצליחה יפה! 🎀','איזה כישרון! 😻','גאה בך! 🥰',
 ];
+const CAT_MSGS_M=[
+  'אלון! 😸','כל הכבוד! 🐾','יופי! 😻','אלוף! 🌟','מדהים! 🐱','וואו! 😺','עוד! 🐾','נהדר! ✨',
+  'אתה נהדר! 💖','מצליח יפה! 🎀','איזה כישרון! 😻','גאה בך! 🥰',
+];
+const catMsgs=()=>isMasc()?CAT_MSGS_M:CAT_MSGS_F;
 const TRANSITION_ANIMALS=['🐱','🐶','🐰','🦊','🐸','🐧','🦁','🐯','🦄','🐨'];
-const TRANSITION_MSGS=[
+const TRANSITION_MSGS_F=[
   'מיכאלה את אלופה! ⭐','כל הכבוד! הלאה! 🚀','מצוין! עוד מילה! 💪','יאללה מיכאלה! 🌟',
   'מדהימה! המשיכי! ✨','וואו! את ממש טובה! 🏆','כוכבת! 🌟 הלאה!','עוד אחת! את יכולה! 💫',
   'את נהדרת מיכאלה! 💖','מצליחה יפה מאוד! 🎀','איזו הצלחה! עוד! 🥳','ממש כישרונית! 🌈',
 ];
+const TRANSITION_MSGS_M=[
+  'אלון אתה אלוף! ⭐','כל הכבוד! הלאה! 🚀','מצוין! עוד מילה! 💪','יאללה אלון! 🌟',
+  'מדהים! המשך! ✨','וואו! אתה ממש טוב! 🏆','כוכב! 🌟 הלאה!','עוד אחת! אתה יכול! 💫',
+  'אתה נהדר אלון! 💖','מצליח יפה מאוד! 🎀','איזו הצלחה! עוד! 🥳','ממש כישרוני! 🌈',
+];
+const transitionMsgs=()=>isMasc()?TRANSITION_MSGS_M:TRANSITION_MSGS_F;
 let catTimer=null;
 let transitionTimer=null;
 
 function showCatMascot(msg){
   const el=document.getElementById('catMascot');
   const bubble=document.getElementById('catBubble');
-  bubble.textContent=msg||CAT_MSGS[Math.floor(Math.random()*CAT_MSGS.length)];
+  const body=document.getElementById('catBody');
+  body.textContent=mascotEmojis()[Math.floor(Math.random()*mascotEmojis().length)];
+  bubble.textContent=msg||catMsgs()[Math.floor(Math.random()*catMsgs().length)];
   el.classList.remove('hidden');
   el.classList.add('visible');
   clearTimeout(catTimer);
@@ -780,7 +837,8 @@ function showCatMascot(msg){
 function showWordTransition(cb){
   const ov=document.getElementById('wordTransition');
   const animal=TRANSITION_ANIMALS[Math.floor(Math.random()*TRANSITION_ANIMALS.length)];
-  const msg=TRANSITION_MSGS[Math.floor(Math.random()*TRANSITION_MSGS.length)];
+  const msgs=transitionMsgs();
+  const msg=msgs[Math.floor(Math.random()*msgs.length)];
   document.getElementById('wtAnimal').textContent=animal;
   document.getElementById('wtText').textContent=msg;
   ov.classList.remove('hidden');
@@ -1188,7 +1246,7 @@ function clearSpellSlots(){
 }
 
 function checkSpell(){
-  if(!spellSlotData.every(l=>l!==null)){document.getElementById('spellFb').textContent='⚠️ מלאי את כל התיבות!';return;}
+  if(!spellSlotData.every(l=>l!==null)){document.getElementById('spellFb').textContent=T('⚠️ מלאי את כל התיבות!','⚠️ מלא את כל התיבות!');return;}
   const allOk=spellSlotData.every((l,i)=>l===spellTarget[i]);
   // Re-color all slots
   document.querySelectorAll('.spell-slot').forEach((s,i)=>{
@@ -1198,11 +1256,11 @@ function checkSpell(){
     document.getElementById('spellFb').textContent='✅ מצוין! כתבת נכון!';
     if(spellExamMode) spellExamCorrect++;
     addStar();
-    showCatMascot('מיכאלה! כתבת נכון! 😻');
+    showCatMascot(heName()+'! כתבת נכון! 😻');
     speakEN(SPELL_WORDS[spellIdx%SPELL_WORDS.length].en);
     setTimeout(()=>showWordTransition(()=>nextSpellWord()),800);
   } else {
-    document.getElementById('spellFb').textContent='❌ יש אותיות לא נכונות — נסי שוב!';
+    document.getElementById('spellFb').textContent=T('❌ יש אותיות לא נכונות — נסי שוב!','❌ יש אותיות לא נכונות — נסה שוב!');
     speakEN(SPELL_WORDS[spellIdx%SPELL_WORDS.length].en);
   }
 }
@@ -1244,7 +1302,7 @@ function startExam(type){
     examQs=new Array(8);
     showScreen('spell');return;
   } else if(type==='words'){
-    if(!spellWordsLoaded){ showToast('⏳ טוענת מילים... נסי שוב בעוד רגע'); return; }
+    if(!spellWordsLoaded){ showToast(T('⏳ טוענת מילים... נסי שוב בעוד רגע','⏳ טוען מילים... נסה שוב בעוד רגע')); return; }
     // Every word in the list, freshly regrouped+reshuffled each round (same
     // topic-cluster logic as the spelling game) rather than a fixed subset.
     examQs=groupAndShuffle(WORD_ROWS);
@@ -1304,7 +1362,7 @@ function showExamQ(){
       examScore+=pts;
       for(let i=0;i<pts;i++) addStar();
       document.getElementById('examFb').textContent=
-        pts===5?'✅ מושלמת! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐'
+        pts===5?T('✅ מושלמת! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐','✅ מושלם! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐')
         :pts>0?`✅ צברת ${pts} נקודות בסבב הזה!`
         :'❌ הפעם 0 נקודות - התשובות הנכונות מודגשות למעלה';
       if(pts===5){
@@ -1411,12 +1469,12 @@ function showResults(){
   const maxScore=examMaxScore||total;
   const pct=Math.round(examScore/maxScore*100);
   let grade,col,emoji,msg;
-  if(pct===100){grade='💯';col='#FFD700';emoji='💎';msg='מושלמת לחלוטין!\nמיכאלה את גאונית! 🌟';}
-  else if(pct>=90){grade='A+';col='#FFD700';emoji='🏆';msg='מצוין מאד!\nכל הכבוד מיכאלה! ⭐';}
-  else if(pct>=80){grade='A';col='#2ECC71';emoji='🥇';msg='מצוין!\nעבודה נהדרת מיכאלה! 🌟';}
+  if(pct===100){grade='💯';col='#FFD700';emoji='💎';msg=T(`מושלמת לחלוטין!\n${heName()} את גאונית! 🌟`,`מושלם לחלוטין!\n${heName()} אתה גאון! 🌟`);}
+  else if(pct>=90){grade='A+';col='#FFD700';emoji='🏆';msg=`מצוין מאד!\nכל הכבוד ${heName()}! ⭐`;}
+  else if(pct>=80){grade='A';col='#2ECC71';emoji='🥇';msg=`מצוין!\nעבודה נהדרת ${heName()}! 🌟`;}
   else if(pct>=70){grade='B';col='#3498DB';emoji='🥈';msg='טוב מאד!\nכמעט מושלם! 💪';}
-  else if(pct>=60){grade='C';col='#E67E22';emoji='🥉';msg='טוב!\nהמשיכי להתאמן! 💪';}
-  else{grade='D';col='#E74C3C';emoji='💪';msg='נסי שוב!\nתרגלי עוד קצת! 📚';}
+  else if(pct>=60){grade='C';col='#E67E22';emoji='🥉';msg=T('טוב!\nהמשיכי להתאמן! 💪','טוב!\nהמשך להתאמן! 💪');}
+  else{grade='D';col='#E74C3C';emoji='💪';msg=T('נסי שוב!\nתרגלי עוד קצת! 📚','נסה שוב!\nתרגל עוד קצת! 📚');}
 
   document.getElementById('resEmoji').textContent=emoji;
   const gl=document.getElementById('resGrade');
@@ -1433,10 +1491,10 @@ function showResults(){
   showScreen('results');
   if(pct>=70){
     setTimeout(()=>{launchConfetti();speakHE(msg.replace(/[💯🏆🥇🥈🥉💪⭐🌟📚]/g,''));},350);
-    setTimeout(()=>showCatMascot('מיכאלה! 😻 כל הכבוד!'),1200);
+    setTimeout(()=>showCatMascot(heName()+'! 😻 כל הכבוד!'),1200);
   } else {
     setTimeout(()=>speakHE(msg.replace(/[💯🏆🥇🥈🥉💪⭐🌟📚]/g,'')),350);
-    setTimeout(()=>showCatMascot('נסי שוב! 🐾 את יכולה!'),800);
+    setTimeout(()=>showCatMascot(T('נסי שוב! 🐾 את יכולה!','נסה שוב! 🐾 אתה יכול!')),800);
   }
 }
 
