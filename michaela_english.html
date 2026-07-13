@@ -1307,6 +1307,10 @@ function showExamQ(){
         pts===5?'✅ מושלמת! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐'
         :pts>0?`✅ צברת ${pts} נקודות בסבב הזה!`
         :'❌ הפעם 0 נקודות - התשובות הנכונות מודגשות למעלה';
+      if(pts===5){
+        launchConfetti();
+        showCatMascot('🎉 בונוס! שני הכיוונים בניחוש ראשון! 🌟');
+      }
       const nb=document.getElementById('examNext');
       nb.textContent='הבאה ➡️';
       nb.style.display='block';
