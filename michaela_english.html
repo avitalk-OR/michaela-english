@@ -1426,6 +1426,69 @@ function startExam(type){
 
 const capWord=w=>w.charAt(0).toUpperCase()+w.slice(1);
 
+// A handful of simple, common English words per letter — used only as decoy
+// options in words-matching (never shown as the correct answer, never
+// translated), and only pulled in when the app's own list doesn't have
+// enough same-starting-letter words for a given target (rare letters like
+// j/k/q/v/x/z have just one or two real list entries).
+const EXTRA_EN_WORDS=[
+  'ant','arm','art','ask','aunt','add','age','ape',
+  'bag','ball','bank','bath','bear','bed','bell','belt','bench','bike','boat','box','bread','brush',
+  'cake','call','camp','candy','cap','card','carry','catch','chair','cheese','chicken','class','clean','coat','coffee','corn','cow','cup','cut',
+  'dad','dance','dark','deep','desk','dish','doll','draw','dream','dress','drink','drive','drum','duck',
+  'egg','elbow','empty','end','enter','even','exam','exit',
+  'face','fact','fall','family','farm','feel','field','find','fine','finger','fix','flag','floor','flower','fly','food','fork','free','fruit','full','fun',
+  'garden','gate','gift','give','glass','glove','goat','gold','good','grape','grass','gray','grow','gum',
+  'hair','half','ham','hat','hate','health','hear','heavy','hen','high','hill','hit','hole','honey','hope','house','hug',
+  'ill','ink','insect','inside','island','item',
+  'jacket','jam','jar','jelly','jet','job','join','joke','joy','juice','jug','jungle',
+  'kettle','kick','kid','kind','king','kiss','kitchen','kite','kitten','knee','knife','knock','knot','koala',
+  'lady','lake','lamp','land','laugh','leaf','learn','leg','lemon','letter','light','line','lion','lip','list','listen','little','lock','log','long','look','loud','luck','lunch',
+  'machine','mail','meat','meet','melon','mile','milk','mirror','mix','mom','monkey','monster','moth','mud',
+  'nail','name','nap','neck','need','nest','net','nice','nine','north','notebook','number','nurse','nut',
+  'oar','ocean','octopus','off','office','oil','olive','onion','orange','order','oven','owl','own','oxygen',
+  'page','paint','pan','pants','paper','park','part','party','path','pen','pencil','penguin','people','pet','phone','pig','pillow','pink','pipe','pizza','plant','plate','pocket','point','pond','pool','potato','pretty','prince','pull','puppy','purple','push',
+  'quack','quart','queen','queue','quick','quiet','quilt','quit','quiz',
+  'rabbit','race','radio','rainbow','reach','read','ready','real','ring','rise','river','robot','rock','roll','roof','room','root','rope','rose','round','rule','ruler','rush',
+  'safe','sail','salt','sand','seat','seed','seven','shape','share','sharp','sheep','sheet','shelf','ship','short','shout','show','sick','side','sign','silver','simple','sing','sister','six','size','skate','ski','skin','skirt','smell','smile','snake','soap','sock','soft','soil','sound','soup','south','space','speak','spider','spoon','spring','square','stair','stamp','stand','state','stay','step','stick','still','stop','storm','straw','sugar','summer','sweet','swim',
+  'table','tail','talk','tall','tape','taste','tea','teach','team','tear','teeth','tell','tent','test','thank','thin','thing','think','thirty','three','thumb','ticket','tie','tiger','tight','toe','tongue','tool','tooth','top','touch','towel','town','toy','trip','truck','true','trust','try','tube','turkey','turtle','twelve','twenty','twist','two',
+  'uncle','uniform','use','useful','usual',
+  'van','vase','vegetable','very','vest','vet','video','view','visit','voice',
+  'wagon','wait','walk','wall','want','warm','wash','wasp','watch','wave','way','wear','whale','wheel','whisper','wide','wife','win','wing','wire','wise','wish','wolf','world','worm','worry','write','wrong',
+  'xylophone',
+  'yard','yarn','yawn','yes','yolk','young',
+  'zebra','zero','zip','zone','zoo',
+];
+
+function sharedPrefixLen(a,b){
+  let i=0;
+  while(i<a.length&&i<b.length&&a[i]===b[i]) i++;
+  return i;
+}
+
+// Picks 2 wrong English options that look genuinely similar to the correct
+// word — same first letter, and the longest shared prefix available — first
+// from the app's own word list, and only reaching into EXTRA_EN_WORDS to
+// fill any gap (some letters, like j/k/q/v, barely exist in the list).
+function pickEnDistractors(correctEn){
+  const inList=[...new Set(WORD_ROWS.map(w=>w.en))].filter(en=>en!==correctEn);
+  const bank=EXTRA_EN_WORDS.filter(en=>en!==correctEn&&!inList.includes(en));
+  const byPrefix=arr=>shuffle(arr).sort((a,b)=>sharedPrefixLen(correctEn,b)-sharedPrefixLen(correctEn,a));
+  const picks=byPrefix(inList).filter(en=>sharedPrefixLen(correctEn,en)>=1).slice(0,2);
+  if(picks.length<2){
+    const more=byPrefix(bank).filter(en=>sharedPrefixLen(correctEn,en)>=1&&!picks.includes(en));
+    picks.push(...more.slice(0,2-picks.length));
+  }
+  if(picks.length<2){
+    // Truly nothing shares even the first letter (shouldn't happen with the
+    // bank in place, but stay correct rather than short an option) — pad
+    // with the closest matches regardless of prefix length.
+    const rest=byPrefix([...inList,...bank]).filter(en=>!picks.includes(en));
+    picks.push(...rest.slice(0,2-picks.length));
+  }
+  return picks;
+}
+
 function showExamQ(){
   if(examIdx>=examQs.length){showResults();return;}
   const q=examQs[examIdx];
@@ -1454,8 +1517,7 @@ function showExamQ(){
     document.getElementById('wordsEnLabel').style.display='block';
     document.getElementById('wordsHeLabel').style.display='block';
 
-    const othersEn=[...new Set(WORD_ROWS.map(w=>w.en))].filter(en=>en!==q.en);
-    const wrongEn=shuffle(othersEn).slice(0,2);
+    const wrongEn=pickEnDistractors(q.en);
     const optsEn=shuffle([q.en,...wrongEn]).map(capWord);
 
     const othersHe=[...new Set(WORD_ROWS.map(w=>w.he))].filter(he=>he!==q.he);
