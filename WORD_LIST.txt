@@ -85,5 +85,89 @@ Down – למטה
 Brave – אמיץ
 Magic – קסם
 sit - לשבת
-
-
+Always – תמיד
+Never – אף פעם
+Sometimes – לפעמים
+Boy – ילד
+Girl – ילדה
+Man – איש / גבר
+Woman – אישה
+Child – ילד / ילדה (כללי)
+City – עיר
+Car – מכונית
+Bus – אוטובוס
+Train – רכבת
+Plane – מטוס
+Street – רחוב
+Road – כביש / דרך
+Animal – חיה
+Bird – ציפור
+Fish – דג
+Moon – ירח
+Star – כוכב
+Sky – שמיים
+Cloud – ענן
+Snow – שלג
+Wind – רוח
+Earth – כדור הארץ / אדמה
+Color – צבע
+Red – אדום
+Blue – כחול
+Green – ירוק
+Yellow – צהוב
+Black – שחור
+White – לבן
+Happy – שמח
+Sad – עצוב
+Angry – כועס
+Tired – עייף
+Hungry – רעב
+Thirsty – צמא
+New – חדש
+Old – ישן / זקן
+Beautiful – יפה
+Ugly – מכוער
+Easy – קל
+Hard – קשה
+Close – סגור / לסגור
+Start – להתחיל / התחלה
+Finish – לסיים / סוף
+Play – לשחק
+Game – משחק
+Music – מוזיקה
+Song – שיר
+Book – ספר
+Story – סיפור
+Picture – תמונה
+Money – כסף
+Pay – לשלם
+Shop – חנות
+Clothes – בגדים
+Shirt – חולצה
+Shoes – נעליים
+Head – ראש
+Eye – עין
+Ear – אוזן
+Nose – אף
+Mouth – פה
+Hand – יד
+Foot – כף רגל
+Right – ימין / נכון
+Left – שמאל
+In – בתוך
+Out – בחוץ
+Under – מתחת
+Over – מעל
+Near – קרוב
+Far – רחוק
+Today – היום
+Tomorrow – מחר
+Yesterday – אתמול
+Week – שבוע
+Month – חודש
+Year – שנה
+Question – שאלה
+Answer – תשובה
+Problem – בעיה
+Idea – רעיון
+Love – אהבה / לאהוב
