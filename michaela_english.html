@@ -602,6 +602,9 @@ function addStar(){
   localStorage.setItem('mk_stars_'+currentProfile,totalStars);
   updateStarsDisp();
   floatStar();
+  // Since this only ever adds 1 at a time, "reaching" and "crossing" a
+  // multiple of 50 are the same moment — it always lands exactly on it.
+  if(totalStars>0&&totalStars%50===0) launchConfetti();
 }
 // Mirrors addStar() for a wrong guess — clamped at 0 so the running total
 // never shows something confusing like a negative star count.
