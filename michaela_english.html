@@ -1307,14 +1307,16 @@ function showExamQ(){
         pts===5?'✅ מושלמת! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐'
         :pts>0?`✅ צברת ${pts} נקודות בסבב הזה!`
         :'❌ הפעם 0 נקודות - התשובות הנכונות מודגשות למעלה';
-      speakEN(q.en);
       const nb=document.getElementById('examNext');
       nb.textContent='הבאה ➡️';
       nb.style.display='block';
       nb.onclick=()=>{examIdx++;showExamQ();};
     };
-    buildWordsOpts('examOptsEn',optsEn,capWord(q.en),pts=>{enPts=pts;maybeFinish();});
-    buildWordsOpts('examOptsHe',optsHe,q.he,pts=>{hePts=pts;maybeFinish();});
+    // Each row speaks its own word, in its own language, the instant it's
+    // guessed correctly — English audio for the English row, Hebrew audio
+    // for the Hebrew row — rather than one shared cue at the very end.
+    buildWordsOpts('examOptsEn',optsEn,capWord(q.en),pts=>{enPts=pts;maybeFinish();},()=>speakEN(q.en));
+    buildWordsOpts('examOptsHe',optsHe,q.he,pts=>{hePts=pts;maybeFinish();},()=>speakHE(q.he));
     return;
   }
 
@@ -1360,11 +1362,12 @@ function buildExamOpts(labels, isCorrect, onReveal){
 
 // One option row: 2 pts for a correct first guess, 1 pt for a correct second
 // guess among the two remaining (the wrong first pick locks out), 0 if that's
-// wrong too. Reports the points earned via onDone once the row is resolved —
-// the caller decides what to do with them (see the combined 'words' round in
-// showExamQ, which runs this twice — once for English, once for Hebrew — and
-// adds a +1 bonus on top if both rows were first-try correct).
-function buildWordsOpts(containerId, labels, correctLabel, onDone){
+// wrong too. onCorrect fires immediately on a correct pick (for audio
+// feedback in that row's own language); onDone reports the points earned
+// once the row is resolved — the caller decides what to do with them (see
+// the combined 'words' round in showExamQ, which runs this twice — once for
+// English, once for Hebrew — and adds a +1 bonus if both were first-try correct).
+function buildWordsOpts(containerId, labels, correctLabel, onDone, onCorrect){
   const g=document.getElementById(containerId);
   g.innerHTML='';
   g.style.gridTemplateColumns='1fr 1fr 1fr';
@@ -1381,6 +1384,7 @@ function buildWordsOpts(containerId, labels, correctLabel, onDone){
       if(isCorrect){
         g.querySelectorAll('button').forEach(x=>x.disabled=true);
         b.style.background='linear-gradient(135deg,#2ECC71,#1A8A4A)';
+        if(onCorrect) onCorrect();
         onDone(attempt===1?2:1);
       } else if(attempt===1){
         b.disabled=true;
