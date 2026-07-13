@@ -759,7 +759,16 @@ function pickVoice(lang){
 }
 
 // Core TTS — pure speechSynthesis, no external URLs
-function _wsa(text,lang,cb){
+// interrupt=true (default) cancels whatever's currently playing so the
+// newest utterance always wins — right for things like arrow-keying fast
+// through the alphabet, where stale audio should never queue up. Pass
+// interrupt=false when a call is a deliberate second thing to say right
+// after another wanted one (e.g. the English word then the Hebrew word in
+// words-matching) — the browser's own speech queue plays them back-to-back
+// with no gap, instead of this cancelling the first one and forcing an
+// artificial cancel-then-wait delay that Chrome imposes even when the
+// cancel had something real to interrupt.
+function _wsa(text,lang,cb,interrupt=true){
   try{
     if(!window.speechSynthesis){ if(cb) cb(); return; }
     const isEn=lang.startsWith('en');
@@ -780,6 +789,7 @@ function _wsa(text,lang,cb){
       if(cb){ u.onend=cb; u.onerror=e=>{ if(e.error!=='interrupted') cb(); }; }
       window.speechSynthesis.speak(u);
     };
+    if(!interrupt){ speakNow(); return; } // let the browser's own queue handle ordering
     // Chrome noticeably stalls a speak() called right after cancel() — even
     // a cancel() with nothing to actually cancel adds that delay. Skip it
     // entirely in the common case (nothing currently playing/queued); only
@@ -798,8 +808,8 @@ function _wsa(text,lang,cb){
 // every single word — was racing against _wsa()'s own cancel() and causing
 // choppy/cut-off speech. It only needs to run once, from a user gesture
 // (see the welcome screen's start button).
-function speakEN(text,cb){ _wsa(text,'en-US',cb); }
-function speakHE(text,cb){ _wsa(text,'he-IL',cb); }
+function speakEN(text,cb,interrupt){ _wsa(text,'en-US',cb,interrupt); }
+function speakHE(text,cb,interrupt){ _wsa(text,'he-IL',cb,interrupt); }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────
 let toastT;
@@ -1456,37 +1466,46 @@ function showExamQ(){
     // only advances once both are resolved. Getting BOTH right on the first
     // guess (2+2) earns a +1 bonus, for 5 total — any other combination is
     // just the plain sum of the two rows.
-    let enPts=null,hePts=null;
-    const maybeFinish=()=>{
-      if(enPts===null||hePts===null) return;
-      // Deferred one tick: the row that just resolved fired its onCorrect
-      // (speechSynthesis.speak()) a moment ago, and the burst of synchronous
-      // DOM work below (confetti particles, floating stars) can otherwise
-      // stall the browser's actual dispatch of that speech request, which is
-      // what shows up as a startup delay on the word audio.
-      setTimeout(()=>{
-        const pts=(enPts===2&&hePts===2)?5:enPts+hePts;
-        examScore+=pts;
-        for(let i=0;i<pts;i++) addStar();
-        document.getElementById('examFb').textContent=
-          pts===5?T('✅ מושלמת! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐','✅ מושלם! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐')
-          :pts>0?`✅ צברת ${pts} נקודות בסבב הזה!`
-          :'❌ הפעם 0 נקודות - התשובות הנכונות מודגשות למעלה';
-        if(pts===5){
-          launchConfetti();
-          showCatMascot('🎉 בונוס! שני הכיוונים בניחוש ראשון! 🌟');
-        }
-        const nb=document.getElementById('examNext');
-        nb.textContent='הבאה ➡️';
-        nb.style.display='block';
-        nb.onclick=()=>{examIdx++;showExamQ();};
-      },0);
+    let enPts=null,hePts=null,enAudioDone=false,heAudioDone=false,revealed=false;
+    const reveal=()=>{
+      if(revealed) return;
+      if(enPts===null||hePts===null||!enAudioDone||!heAudioDone) return;
+      revealed=true;
+      const pts=(enPts===2&&hePts===2)?5:enPts+hePts;
+      examScore+=pts;
+      for(let i=0;i<pts;i++) addStar();
+      document.getElementById('examFb').textContent=
+        pts===5?T('✅ מושלמת! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐','✅ מושלם! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐')
+        :pts>0?`✅ צברת ${pts} נקודות בסבב הזה!`
+        :'❌ הפעם 0 נקודות - התשובות הנכונות מודגשות למעלה';
+      if(pts===5){
+        launchConfetti();
+        showCatMascot('🎉 בונוס! שני הכיוונים בניחוש ראשון! 🌟');
+      }
+      const nb=document.getElementById('examNext');
+      nb.textContent='הבאה ➡️';
+      nb.style.display='block';
+      nb.onclick=()=>{examIdx++;showExamQ();};
     };
-    // Each row speaks its own word, in its own language, the instant it's
-    // guessed correctly — English audio for the English row, Hebrew audio
-    // for the Hebrew row — rather than one shared cue at the very end.
-    buildWordsOpts('examOptsEn',optsEn,capWord(q.en),pts=>{enPts=pts;maybeFinish();},()=>speakEN(q.en));
-    buildWordsOpts('examOptsHe',optsHe,q.he,pts=>{hePts=pts;maybeFinish();},()=>speakHE(q.he));
+    // "Say the word, then let the confetti/next-button show up" — the
+    // celebration now genuinely waits for that row's word audio to finish
+    // (via speak's onend callback) instead of firing right alongside it. A
+    // 2.5s fallback covers the case where onend never fires (e.g. the
+    // browser silently drops an utterance), so a round can never get stuck.
+    const settleEn=()=>{ if(!enAudioDone){ enAudioDone=true; reveal(); } };
+    const settleHe=()=>{ if(!heAudioDone){ heAudioDone=true; reveal(); } };
+    // Each row speaks its own word the instant it's guessed correctly —
+    // interrupt=false so the English and Hebrew words queue back-to-back
+    // through the browser's own speech queue instead of the second one
+    // cancelling the first (which is what forced Chrome's cancel-then-wait
+    // delay on whichever row gets answered second — always the Hebrew one,
+    // since it's laid out below the English row).
+    buildWordsOpts('examOptsEn',optsEn,capWord(q.en),
+      pts=>{ enPts=pts; if(pts===0) settleEn(); },
+      ()=>{ speakEN(q.en,settleEn,false); setTimeout(settleEn,2500); });
+    buildWordsOpts('examOptsHe',optsHe,q.he,
+      pts=>{ hePts=pts; if(pts===0) settleHe(); },
+      ()=>{ speakHE(q.he,settleHe,false); setTimeout(settleHe,2500); });
     return;
   }
 
