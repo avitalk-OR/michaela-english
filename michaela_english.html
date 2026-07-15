@@ -1619,6 +1619,11 @@ function runWordsRound(q,rows){
     setTimeout(()=>{
       startSingleSpell({en:q.en,he:q.he,em:q.em},()=>{
         examIdx++;
+        // We navigated away to the spell screen for the interlude — switch
+        // back to the exam screen before loading the next question, or
+        // showExamQ() would populate it while the spell screen (still
+        // showing the just-finished word) stayed the one actually visible.
+        showScreen('exam');
         showExamQ();
       });
     },1300);
