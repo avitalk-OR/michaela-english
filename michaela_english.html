@@ -287,6 +287,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
     <div class="menu-card" onclick="showScreen('letters')"><div class="mc-icon">🔤</div><div class="mc-label">אותיות<br>Letters</div></div>
     <div class="menu-card" onclick="showScreen('spell')"><div class="mc-icon">🔡</div><div class="mc-label">הרכבת מילים<br>⚔️ 🍎</div></div>
     <div class="menu-card" onclick="startExam('words')"><div class="mc-icon">🎯</div><div class="mc-label">התאמת מילים<br>📖 🔊</div></div>
+    <div class="menu-card" onclick="startExam('wordsZelda')"><div class="mc-icon">🎮</div><div class="mc-label">ZELDA<br>⚔️ 🛡️</div></div>
   </div>
   <button class="btn btn-purple btn-sm" id="resetScoreBtn" style="margin-top:18px" onclick="confirmResetScore()">🔄 איפוס ניקוד</button>
 </div>
@@ -355,7 +356,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
     <div id="examEmoji" style="font-size:4.2rem;margin-bottom:10px">🍎</div>
     <div id="examHe" style="font-size:1.8rem;direction:rtl;margin-bottom:4px;min-height:28px;font-weight:600"></div>
     <div id="examPrompt" style="font-size:.85rem;opacity:.7;direction:rtl;margin-bottom:8px"></div>
-    <button class="aud-btn" id="examReplay" style="margin:0 auto 8px;display:block" onclick="if(window._curExamQ){var q=window._curExamQ;examType==='words'?speakEN(q.en):speakHE(q.he||q.ex||'')}" data-fem-title="שמעי שוב 🔊" data-masc-title="שמע שוב 🔊" title="שמעי שוב 🔊">🔊</button>
+    <button class="aud-btn" id="examReplay" style="margin:0 auto 8px;display:block" onclick="if(window._curExamQ){var q=window._curExamQ;(examType==='words'||examType==='wordsZelda')?speakEN(q.en):speakHE(q.he||q.ex||'')}" data-fem-title="שמעי שוב 🔊" data-masc-title="שמע שוב 🔊" title="שמעי שוב 🔊">🔊</button>
     <div class="quiz-opts" id="examOpts"></div>
     <div id="wordsEnLabel" style="display:none;font-size:.85rem;opacity:.75;direction:rtl;margin:8px 0 4px" data-fem="בחרי את המילה הנכונה באנגלית 🇬🇧" data-masc="בחר את המילה הנכונה באנגלית 🇬🇧">בחרי את המילה הנכונה באנגלית 🇬🇧</div>
     <div class="quiz-opts" id="examOptsEn"></div>
@@ -443,6 +444,8 @@ const WORD_EMOJI={
   hand:'✋',foot:'🦶',right:'👉',left:'👈',in:'📥',out:'📤',under:'🔽',over:'🔼',
   near:'📍',far:'🚀',today:'📅',tomorrow:'🔜',yesterday:'🔙',week:'🗓️',
   month:'📆',year:'🎊',question:'❓',answer:'✅',problem:'❗',idea:'💡',love:'❤️',
+  strength:'💪',speed:'🏎️',temperament:'🎭',talk:'💬',stable:'🐴',board:'🏠',
+  register:'📝',bye:'👋',need:'🙏',have:'🤲',silent:'🤫',prince:'🤴',defence:'🛡️',
 };
 
 const CELEBRATIONS=[
@@ -481,6 +484,7 @@ function init(){
   buildLtrGrid();
   updateLtrDisp();
   loadSpellWords();
+  loadZeldaWords();
   document.addEventListener('keydown',e=>{
     if(!document.getElementById('screen-letters').classList.contains('hidden')){
       if(e.key==='ArrowRight') nextLtr();
@@ -1062,6 +1066,54 @@ Answer – תשובה
 Problem – בעיה
 Idea – רעיון
 Love – אהבה / לאהוב`;
+// ZELDA category — a separate, independent word pool (its own file, its own
+// loaded-flag) that the words-matching round logic runs against exactly like
+// the main list, just sourced from WORD_LIST_ZELDA.txt instead.
+const WORD_LIST_ZELDA_FALLBACK=`Strength – כוח
+
+Speed – מהירות
+
+Stamina – סיבולת
+
+Temperament – מזג
+
+Wild – פראי
+
+Take –לקחת
+
+Talk – לדבר
+
+Stable – אורווה
+
+Board – לאכסן
+Register – לרשום
+
+Bye – ביי / להתראות
+
+Horse – סוס
+
+Need – צריך / להצטרך
+
+Have – יש
+
+Silent – שקט
+Prince – נסיכה
+
+Attack – התקפה
+
+Defence – הגנה`;
+let WORD_ROWS_ZELDA=[];
+let zeldaWordsLoaded=false;
+function loadZeldaWords(){
+  fetch('WORD_LIST_ZELDA.txt')
+    .then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.text(); })
+    .catch(()=>WORD_LIST_ZELDA_FALLBACK)
+    .then(txt=>{
+      WORD_ROWS_ZELDA=parseWordListText(txt);
+      zeldaWordsLoaded=true;
+    });
+}
+
 let SPELL_WORDS=[];
 let WORD_ROWS=[]; // parsed rows in the source list's original order, kept so the
                    // words-quiz can regroup+reshuffle fresh each round without
@@ -1095,8 +1147,6 @@ function groupAndShuffle(words){
   return shuffle(groups).map(g=>shuffle(g)).flat();
 }
 
-// Words added via the "add a new word" button live in localStorage (this app
-// has no backend), separate from the base list, and get merged in on every load.
 function loadSpellWords(){
   fetch('WORD_LIST.txt')
     .then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.text(); })
@@ -1397,7 +1447,7 @@ let examIdx=0;
 let examScore=0;
 let examMaxScore=0; // words mode scores 3/1/0 per question, not a flat 1 — needed for % grading
 
-const EXAM_TITLES={letters:'📝 מבחן אותיות',spell:'📝 מבחן הרכבה',words:'🎯 התאמת מילים'};
+const EXAM_TITLES={letters:'📝 מבחן אותיות',spell:'📝 מבחן הרכבה',words:'🎯 התאמת מילים',wordsZelda:'🎮 ZELDA'};
 
 function startExam(type){
   examType=type;
@@ -1418,6 +1468,10 @@ function startExam(type){
     // topic-cluster logic as the spelling game) rather than a fixed subset.
     examQs=groupAndShuffle(WORD_ROWS);
     examMaxScore=examQs.length*5; // 2+2 pts for the two rows, +1 bonus for acing both first try
+  } else if(type==='wordsZelda'){
+    if(!zeldaWordsLoaded){ showToast(T('⏳ טוענת מילים... נסי שוב בעוד רגע','⏳ טוען מילים... נסה שוב בעוד רגע')); return; }
+    examQs=groupAndShuffle(WORD_ROWS_ZELDA);
+    examMaxScore=examQs.length*5;
   }
   document.getElementById('examTitle').textContent=EXAM_TITLES[type]||'📝 מבחן';
   showScreen('exam');
@@ -1468,10 +1522,12 @@ function sharedPrefixLen(a,b){
 
 // Picks 2 wrong English options that look genuinely similar to the correct
 // word — same first letter, and the longest shared prefix available — first
-// from the app's own word list, and only reaching into EXTRA_EN_WORDS to
-// fill any gap (some letters, like j/k/q/v, barely exist in the list).
-function pickEnDistractors(correctEn){
-  const inList=new Set([...new Set(WORD_ROWS.map(w=>w.en))].filter(en=>en!==correctEn));
+// from the given word list (each category has its own — words uses
+// WORD_ROWS, ZELDA uses WORD_ROWS_ZELDA), and only reaching into
+// EXTRA_EN_WORDS to fill any gap (rare letters, or small lists like ZELDA's
+// barely have same-starting-letter words at all).
+function pickEnDistractors(correctEn,rows){
+  const inList=new Set([...new Set(rows.map(w=>w.en))].filter(en=>en!==correctEn));
   const bank=EXTRA_EN_WORDS.filter(en=>en!==correctEn&&!inList.has(en));
   // Rank the WHOLE combined pool by shared-prefix length together — ranking
   // the list alone first (and only reaching into the bank when the list came
@@ -1481,6 +1537,66 @@ function pickEnDistractors(correctEn){
   const pool=[...inList,...bank];
   const score=w=>sharedPrefixLen(correctEn,w)*10+(inList.has(w)?1:0);
   return shuffle(pool).sort((a,b)=>score(b)-score(a)).slice(0,2);
+}
+
+// The words-matching round itself: two option rows (English, then Hebrew)
+// for the current word q, sourced from the given word list — shared by both
+// the "words" category (WORD_ROWS) and "ZELDA" (WORD_ROWS_ZELDA), which are
+// otherwise identical in every rule.
+function runWordsRound(q,rows){
+  // No text hint is shown at all here — just the emoji and, on request, the
+  // English pronunciation — since the two option rows below (English, then
+  // Hebrew) are themselves the whole exercise in each direction.
+  document.getElementById('examEmoji').textContent=q.em;
+  document.getElementById('examHe').textContent='';
+  document.getElementById('examPrompt').textContent='';
+  document.getElementById('wordsEnLabel').style.display='block';
+  document.getElementById('wordsHeLabel').style.display='block';
+
+  const wrongEn=pickEnDistractors(q.en,rows);
+  const optsEn=shuffle([q.en,...wrongEn]).map(capWord);
+
+  const othersHe=[...new Set(rows.map(w=>w.he))].filter(he=>he!==q.he);
+  const wrongHe=shuffle(othersHe).slice(0,2);
+  const optsHe=shuffle([q.he,...wrongHe]);
+
+  // Both rows use the identical 2/1/0 first-guess/retry scoring; the round
+  // only advances once both are resolved. Getting BOTH right on the first
+  // guess (2+2) earns a +1 bonus, for 5 total — any other combination is
+  // just the plain sum of the two rows.
+  let enPts=null,hePts=null;
+  const maybeFinish=()=>{
+    if(enPts===null||hePts===null) return;
+    const pts=(enPts===2&&hePts===2)?5:enPts+hePts;
+    examScore+=pts;
+    for(let i=0;i<pts;i++) addStar();
+    document.getElementById('examFb').textContent=
+      pts===5?T('✅ מושלמת! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐','✅ מושלם! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐')
+      :pts>0?`✅ צברת ${pts} נקודות בסבב הזה!`
+      :'❌ הפעם 0 נקודות - התשובות הנכונות מודגשות למעלה';
+    // Next shows up right away — no reason to make the player wait for
+    // audio before they can move on. Only the confetti/mascot (bonus-only,
+    // purely decorative) gets a short buffer so it doesn't feel like it's
+    // cutting the just-spoken word off, without holding up Next for it.
+    const nb=document.getElementById('examNext');
+    nb.textContent='הבאה ➡️';
+    nb.style.display='block';
+    nb.onclick=()=>{examIdx++;showExamQ();};
+    if(pts===5){
+      setTimeout(()=>{
+        launchConfetti();
+        showCatMascot('🎉 בונוס! שני הכיוונים בניחוש ראשון! 🌟');
+      },400);
+    }
+  };
+  // Each row speaks its own word the instant it's guessed correctly —
+  // interrupt=false so the English and Hebrew words queue back-to-back
+  // through the browser's own speech queue instead of the second one
+  // cancelling the first (which is what forced Chrome's cancel-then-wait
+  // delay on whichever row gets answered second — always the Hebrew one,
+  // since it's laid out below the English row).
+  buildWordsOpts('examOptsEn',optsEn,capWord(q.en),pts=>{enPts=pts;maybeFinish();},()=>speakEN(q.en,null,false));
+  buildWordsOpts('examOptsHe',optsHe,q.he,pts=>{hePts=pts;maybeFinish();},()=>speakHE(q.he,null,false));
 }
 
 function showExamQ(){
@@ -1501,62 +1617,8 @@ function showExamQ(){
   // Replay button speaks q.he, which for letters contains the English example word — would give away the answer
   document.getElementById('examReplay').style.display=examType==='letters'?'none':'';
 
-  if(examType==='words'){
-    // No text hint is shown at all here — just the emoji and, on request, the
-    // English pronunciation — since the two option rows below (English, then
-    // Hebrew) are themselves the whole exercise in each direction.
-    document.getElementById('examEmoji').textContent=q.em;
-    document.getElementById('examHe').textContent='';
-    document.getElementById('examPrompt').textContent='';
-    document.getElementById('wordsEnLabel').style.display='block';
-    document.getElementById('wordsHeLabel').style.display='block';
-
-    const wrongEn=pickEnDistractors(q.en);
-    const optsEn=shuffle([q.en,...wrongEn]).map(capWord);
-
-    const othersHe=[...new Set(WORD_ROWS.map(w=>w.he))].filter(he=>he!==q.he);
-    const wrongHe=shuffle(othersHe).slice(0,2);
-    const optsHe=shuffle([q.he,...wrongHe]);
-
-    // Both rows use the identical 2/1/0 first-guess/retry scoring; the round
-    // only advances once both are resolved. Getting BOTH right on the first
-    // guess (2+2) earns a +1 bonus, for 5 total — any other combination is
-    // just the plain sum of the two rows.
-    let enPts=null,hePts=null;
-    const maybeFinish=()=>{
-      if(enPts===null||hePts===null) return;
-      const pts=(enPts===2&&hePts===2)?5:enPts+hePts;
-      examScore+=pts;
-      for(let i=0;i<pts;i++) addStar();
-      document.getElementById('examFb').textContent=
-        pts===5?T('✅ מושלמת! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐','✅ מושלם! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐')
-        :pts>0?`✅ צברת ${pts} נקודות בסבב הזה!`
-        :'❌ הפעם 0 נקודות - התשובות הנכונות מודגשות למעלה';
-      // Next shows up right away — no reason to make the player wait for
-      // audio before they can move on. Only the confetti/mascot (bonus-only,
-      // purely decorative) gets a short buffer so it doesn't feel like it's
-      // cutting the just-spoken word off, without holding up Next for it.
-      const nb=document.getElementById('examNext');
-      nb.textContent='הבאה ➡️';
-      nb.style.display='block';
-      nb.onclick=()=>{examIdx++;showExamQ();};
-      if(pts===5){
-        setTimeout(()=>{
-          launchConfetti();
-          showCatMascot('🎉 בונוס! שני הכיוונים בניחוש ראשון! 🌟');
-        },400);
-      }
-    };
-    // Each row speaks its own word the instant it's guessed correctly —
-    // interrupt=false so the English and Hebrew words queue back-to-back
-    // through the browser's own speech queue instead of the second one
-    // cancelling the first (which is what forced Chrome's cancel-then-wait
-    // delay on whichever row gets answered second — always the Hebrew one,
-    // since it's laid out below the English row).
-    buildWordsOpts('examOptsEn',optsEn,capWord(q.en),pts=>{enPts=pts;maybeFinish();},()=>speakEN(q.en,null,false));
-    buildWordsOpts('examOptsHe',optsHe,q.he,pts=>{hePts=pts;maybeFinish();},()=>speakHE(q.he,null,false));
-    return;
-  }
+  if(examType==='words'){ runWordsRound(q,WORD_ROWS); return; }
+  if(examType==='wordsZelda'){ runWordsRound(q,WORD_ROWS_ZELDA); return; }
 
   document.getElementById('examEmoji').textContent=q.em;
   document.getElementById('examHe').textContent='';
@@ -1659,7 +1721,7 @@ function showResults(){
   document.getElementById('resEmoji').textContent=emoji;
   const gl=document.getElementById('resGrade');
   gl.textContent=grade;gl.style.color=col;
-  document.getElementById('resScore').textContent=examType==='words'
+  document.getElementById('resScore').textContent=(examType==='words'||examType==='wordsZelda')
     ? `${examScore} / ${maxScore} נקודות`
     : `${examScore} / ${total} נכון`;
   document.getElementById('resPct').textContent=`${pct}%`;
