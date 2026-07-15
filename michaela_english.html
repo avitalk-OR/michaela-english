@@ -335,6 +335,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
     <div class="spell-tiles" id="spellTiles"></div>
     <div class="spell-word-nav">
       <button class="btn btn-blue btn-sm" onclick="clearSpellSlots()" data-fem="🔄 נקי" data-masc="🔄 נקה">🔄 נקי</button>
+      <button class="btn btn-yellow btn-sm" id="spellHelpBtn" onclick="useSpellHelp()">💡 עזרה (2)</button>
       <button class="btn btn-green btn-sm" onclick="checkSpell()" data-fem="✅ בדקי" data-masc="✅ בדוק">✅ בדקי</button>
       <button class="btn btn-purple btn-sm" onclick="nextSpellWord()" data-fem="דלגי ⏭️" data-masc="דלג ⏭️">דלגי ⏭️</button>
     </div>
@@ -1183,6 +1184,14 @@ let selFromSlot=null;   // origin slot index, if picked up from a slot
 let spellExamMode=false;
 let spellExamCorrect=0;
 let spellExamTotal=0;
+let spellHelpUsed=0; // reset per word in updateSpellDisp()
+
+// Words under 4 real letters (excluding gaps) only get 1 hint instead of 2 —
+// not much of a puzzle left to guess after two hints on a 3-letter word.
+function spellMaxHelp(){
+  const letters=spellTarget.filter(ch=>ch!==' ').length;
+  return letters<4?1:2;
+}
 
 // Drag tracking — active only between a pointerdown on a tile/slot and its matching pointerup.
 let pointerDownActive=false;
@@ -1257,6 +1266,19 @@ function onSpellPointerUp(e){
     // pick-up before a second tap ever had a chance to place it. Leaving
     // selLetter set means a genuine failed drag just falls back to the tap
     // flow — the next tap on any box still places the letter.
+  } else if(selLetter!==null&&selFromSlot===null){
+    // A plain tap (no drag) on a pool tile places it immediately — the first
+    // empty box, left→right — in one motion, instead of needing a second tap
+    // on the tile. (Picking a letter back up from a slot to reposition it
+    // still waits for a follow-up tap/drag, unaffected by this.)
+    const idx=spellSlotData.findIndex(v=>v===null);
+    if(idx!==-1){
+      placeLetterInSlot(idx,selLetter,selTileEl);
+      clearSelectionVisuals();
+      selLetter=null; selTileEl=null; selFromSlot=null;
+    } else {
+      cancelSelection(); // no empty box anywhere — nothing to do with it
+    }
   }
   dragMoved=false;
 }
@@ -1308,6 +1330,16 @@ function updateSpellDisp(){
     document.getElementById('spellProg').textContent=`מילה ${(spellIdx%tot)+1} מתוך ${tot}`;
   }
   document.getElementById('spellScoreBadge').textContent=`⭐ ${totalStars}`;
+  spellHelpUsed=0;
+  updateSpellHelpBtn();
+}
+
+function updateSpellHelpBtn(){
+  const btn=document.getElementById('spellHelpBtn');
+  const left=spellMaxHelp()-spellHelpUsed;
+  btn.disabled=left<=0;
+  btn.style.opacity=left<=0?'.4':'1';
+  btn.textContent=`💡 עזרה (${left})`;
 }
 
 // Word audio is English-only — the Hebrew meaning is always shown as text, never spoken.
@@ -1367,20 +1399,11 @@ function buildSpellTiles(letters){
     t.addEventListener('pointerdown',e=>{
       if(t.classList.contains('used')) return;
       e.preventDefault();
-      if(selTileEl===t){
-        // Second tap in a row on the same tile — drop it straight into the
-        // first empty box, left→right (spellSlotData is already in that
-        // visual order since .spell-slots forces direction:ltr).
-        const idx=spellSlotData.findIndex(v=>v===null);
-        if(idx!==-1){
-          placeLetterInSlot(idx,letter,t);
-          clearSelectionVisuals();
-          selLetter=null; selTileEl=null; selFromSlot=null;
-        } else {
-          cancelSelection(); // no empty box left — just deselect
-        }
-        return;
-      }
+      // A plain tap places it straight away (see onSpellPointerUp) — first
+      // empty box, left→right (spellSlotData is already in that visual order
+      // since .spell-slots forces direction:ltr) — so this just needs to
+      // start the pick-up/drag-tracking; a same-tile-twice special case
+      // isn't needed anymore since one tap already does the whole job.
       selectLetter(letter,t,null);
       beginPointerTracking(e);
     });
@@ -1388,8 +1411,16 @@ function buildSpellTiles(letters){
   });
 }
 
+// Looks the slot up by its dataset.idx rather than raw NodeList position —
+// gap positions (multi-word entries like "wake up") don't get a .spell-slot
+// element at all, so array position drifts out of sync with idx as soon as a
+// gap comes before it.
+function findSpellSlotEl(idx){
+  return [...document.querySelectorAll('.spell-slot')].find(s=>+s.dataset.idx===idx);
+}
+
 function placeLetterInSlot(idx,letter,tileEl){
-  const slot=document.querySelectorAll('.spell-slot')[idx];
+  const slot=findSpellSlotEl(idx);
   if(!slot) return;
   if(spellSlotData[idx]!==null) returnLetterToTile(spellSlotData[idx]);
   spellSlotData[idx]=letter;
@@ -1423,11 +1454,29 @@ function clearSpellSlots(){
   document.getElementById('spellFb').textContent='';
 }
 
+// Fills in one correct letter for free (well — for a point) and disables
+// itself once spellMaxHelp() uses are spent for this word.
+function useSpellHelp(){
+  if(spellHelpUsed>=spellMaxHelp()) return;
+  const idx=spellTarget.findIndex((ch,i)=>ch!==' '&&spellSlotData[i]!==ch);
+  if(idx===-1) return; // already fully correct — nothing left to help with
+  const needed=spellTarget[idx];
+  if(spellSlotData[idx]!==null) returnLetterToTile(spellSlotData[idx]);
+  const tileEl=[...document.querySelectorAll('.spell-tile')]
+    .find(t=>t.dataset.letter===needed&&!t.classList.contains('used'));
+  if(!tileEl) return; // shouldn't happen — every target letter has a tile
+  placeLetterInSlot(idx,needed,tileEl);
+  spellHelpUsed++;
+  loseStar();
+  updateSpellHelpBtn();
+}
+
 function checkSpell(){
   if(!spellSlotData.every(l=>l!==null)){document.getElementById('spellFb').textContent=T('⚠️ מלאי את כל התיבות!','⚠️ מלא את כל התיבות!');return;}
   const allOk=spellSlotData.every((l,i)=>l===spellTarget[i]);
-  // Re-color all slots
-  document.querySelectorAll('.spell-slot').forEach((s,i)=>{
+  // Re-color all slots (by dataset.idx, not NodeList position — see findSpellSlotEl)
+  document.querySelectorAll('.spell-slot').forEach(s=>{
+    const i=+s.dataset.idx;
     s.className='spell-slot filled '+(spellSlotData[i]===spellTarget[i]?'correct':'wrong');
   });
   const currentWord=singleSpellWord||SPELL_WORDS[spellIdx%SPELL_WORDS.length];
