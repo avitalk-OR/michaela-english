@@ -285,7 +285,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
   <div class="stars-badge">⭐ כוכבים שלי: <span id="starsDisp">0</span></div>
   <div class="menu-grid">
     <div class="menu-card" onclick="showScreen('letters')"><div class="mc-icon">🔤</div><div class="mc-label">אותיות<br>Letters</div></div>
-    <div class="menu-card" onclick="showScreen('spell')"><div class="mc-icon">🔡</div><div class="mc-label">הרכבת מילים<br>⚔️ 🍎</div></div>
+    <div class="menu-card" onclick="singleSpellWord=null;singleSpellCallback=null;showScreen('spell')"><div class="mc-icon">🔡</div><div class="mc-label">הרכבת מילים<br>⚔️ 🍎</div></div>
     <div class="menu-card" onclick="startExam('words')"><div class="mc-icon">🎯</div><div class="mc-label">התאמת מילים<br>📖 🔊</div></div>
     <div class="menu-card" onclick="startExam('wordsZelda')"><div class="mc-icon">🎮</div><div class="mc-label">ZELDA<br>⚔️ 🛡️</div></div>
   </div>
@@ -321,7 +321,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 <!-- SPELL -->
 <div class="screen hidden" id="screen-spell">
   <div class="scr-header">
-    <button class="back-btn" onclick="showScreen('menu')">🏠</button>
+    <button class="back-btn" onclick="singleSpellWord=null;singleSpellCallback=null;showScreen('menu')">🏠</button>
     <div class="scr-title">🔡 הרכבת מילים</div>
     <div class="exam-score-badge" id="spellScoreBadge">⭐ 0</div>
   </div>
@@ -1162,6 +1162,18 @@ function loadSpellWords(){
 let spellIdx=0;
 let spellSlotData=[];
 let spellTarget=[];     // correct uppercase letters for current word
+// Set by startSingleSpell() when words-matching (or ZELDA) hands off to the
+// spell screen to build the word just matched, instead of the normal
+// cycle-through-SPELL_WORDS flow. Cleared on any normal entry into the spell
+// screen (menu card, its own home button) so an abandoned single-word round
+// never leaks into the regular spelling game afterward.
+let singleSpellWord=null;
+let singleSpellCallback=null;
+function startSingleSpell(word,onComplete){
+  singleSpellWord=word;
+  singleSpellCallback=onComplete;
+  showScreen('spell');
+}
 // Hybrid tap-or-drag model: tap a letter tile to pick it up, then tap a box to place it —
 // OR press and drag a tile straight onto a box in one gesture. Pointer Events unify
 // mouse/touch/pen so both interactions share the same pick-up state below.
@@ -1275,9 +1287,9 @@ function selectLetter(letter,tileEl,fromSlotIdx){
 }
 
 function updateSpellDisp(){
-  if(!SPELL_WORDS.length) return;
+  if(!singleSpellWord&&!SPELL_WORDS.length) return;
   selLetter=null; selTileEl=null; selFromSlot=null;
-  const w=SPELL_WORDS[spellIdx%SPELL_WORDS.length];
+  const w=singleSpellWord||SPELL_WORDS[spellIdx%SPELL_WORDS.length];
   spellTarget=w.en.toUpperCase().split('');
   document.getElementById('spellEmoji').textContent=w.em;
   document.getElementById('spellHe').textContent=w.he;
@@ -1287,15 +1299,20 @@ function updateSpellDisp(){
   spellSlotData=spellTarget.map(ch=>ch===' '?' ':null);
   buildSpellSlots(spellTarget);
   buildSpellTiles(spellTarget);
-  const tot=SPELL_WORDS.length,done=spellIdx%tot;
-  document.getElementById('spellBar').style.width=(done/tot*100)+'%';
-  document.getElementById('spellProg').textContent=`מילה ${(spellIdx%tot)+1} מתוך ${tot}`;
+  if(singleSpellWord){
+    document.getElementById('spellBar').style.width='0%';
+    document.getElementById('spellProg').textContent=T('השלימי את המילה שהתאמת! ✨','השלם את המילה שהתאמת! ✨');
+  } else {
+    const tot=SPELL_WORDS.length,done=spellIdx%tot;
+    document.getElementById('spellBar').style.width=(done/tot*100)+'%';
+    document.getElementById('spellProg').textContent=`מילה ${(spellIdx%tot)+1} מתוך ${tot}`;
+  }
   document.getElementById('spellScoreBadge').textContent=`⭐ ${totalStars}`;
 }
 
 // Word audio is English-only — the Hebrew meaning is always shown as text, never spoken.
 function speakSpellWord(){
-  const w=SPELL_WORDS[spellIdx%SPELL_WORDS.length];
+  const w=singleSpellWord||SPELL_WORDS[spellIdx%SPELL_WORDS.length];
   speakEN(w.en);
 }
 
@@ -1413,16 +1430,26 @@ function checkSpell(){
   document.querySelectorAll('.spell-slot').forEach((s,i)=>{
     s.className='spell-slot filled '+(spellSlotData[i]===spellTarget[i]?'correct':'wrong');
   });
+  const currentWord=singleSpellWord||SPELL_WORDS[spellIdx%SPELL_WORDS.length];
   if(allOk){
     document.getElementById('spellFb').textContent='✅ מצוין! כתבת נכון!';
     if(spellExamMode) spellExamCorrect++;
     addStar();
     showCatMascot(heName()+'! כתבת נכון! 😻');
-    speakEN(SPELL_WORDS[spellIdx%SPELL_WORDS.length].en);
-    setTimeout(()=>showWordTransition(()=>nextSpellWord()),800);
+    speakEN(currentWord.en);
+    if(singleSpellWord){
+      // Hand back to whichever caller (words-matching/ZELDA) sent us here —
+      // clear the single-word state first so a stray return to the spell
+      // screen afterward resumes the normal cycling flow, not this word again.
+      const cb=singleSpellCallback;
+      singleSpellWord=null; singleSpellCallback=null;
+      setTimeout(()=>showWordTransition(()=>{ if(cb) cb(); }),800);
+    } else {
+      setTimeout(()=>showWordTransition(()=>nextSpellWord()),800);
+    }
   } else {
     document.getElementById('spellFb').textContent=T('❌ יש אותיות לא נכונות — נסי שוב!','❌ יש אותיות לא נכונות — נסה שוב!');
-    speakEN(SPELL_WORDS[spellIdx%SPELL_WORDS.length].en);
+    speakEN(currentWord.en);
   }
 }
 
@@ -1457,7 +1484,10 @@ function startExam(type){
     examQs=shuffle([...LETTERS]).slice(0,15);
     examMaxScore=examQs.length;
   } else if(type==='spell'){
-    // Spell exam: run through the spell screen itself for a fixed number of words
+    // Spell exam: run through the spell screen itself for a fixed number of words.
+    // Cancel any pending single-word interlude from words-matching/ZELDA — its
+    // callback would otherwise fire later and yank the player back mid-exam.
+    singleSpellWord=null; singleSpellCallback=null;
     spellExamMode=true;spellExamCorrect=0;spellExamTotal=8;
     spellExamStart=spellIdx;
     examQs=new Array(8);
@@ -1574,20 +1604,24 @@ function runWordsRound(q,rows){
       pts===5?T('✅ מושלמת! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐','✅ מושלם! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐')
       :pts>0?`✅ צברת ${pts} נקודות בסבב הזה!`
       :'❌ הפעם 0 נקודות - התשובות הנכונות מודגשות למעלה';
-    // Next shows up right away — no reason to make the player wait for
-    // audio before they can move on. Only the confetti/mascot (bonus-only,
-    // purely decorative) gets a short buffer so it doesn't feel like it's
-    // cutting the just-spoken word off, without holding up Next for it.
-    const nb=document.getElementById('examNext');
-    nb.textContent='הבאה ➡️';
-    nb.style.display='block';
-    nb.onclick=()=>{examIdx++;showExamQ();};
     if(pts===5){
       setTimeout(()=>{
         launchConfetti();
         showCatMascot('🎉 בונוס! שני הכיוונים בניחוש ראשון! 🌟');
       },400);
     }
+    // Once the round is fully resolved, move straight into building the same
+    // word (reinforces spelling right after the matching exercise) instead
+    // of a manual "Next" — a short pause first so the score text (and the
+    // bonus confetti, if any) is actually visible before the screen changes.
+    // examType is untouched by the spell screen itself, so it's still
+    // 'words'/'wordsZelda' when this callback runs — no need to restore it.
+    setTimeout(()=>{
+      startSingleSpell({en:q.en,he:q.he,em:q.em},()=>{
+        examIdx++;
+        showExamQ();
+      });
+    },1300);
   };
   // Each row speaks its own word the instant it's guessed correctly —
   // interrupt=false so the English and Hebrew words queue back-to-back
