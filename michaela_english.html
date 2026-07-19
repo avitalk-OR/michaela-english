@@ -122,6 +122,8 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 .menu-card{background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,.2);border-radius:22px;padding:22px 12px;text-align:center;cursor:pointer;transition:all .25s;min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
 .menu-card:active{transform:scale(.94);background:rgba(255,255,255,.22)}
 .mc-icon{font-size:2.4rem}.mc-label{font-size:1rem;font-weight:700}
+.wordlen-grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:420px}
+.wordlen-grid .btn{min-width:92px}
 /* HEADER */
 .scr-header{display:flex;align-items:center;width:100%;max-width:480px;margin-bottom:14px;gap:12px;flex-shrink:0}
 .back-btn{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:1.4rem;width:48px;height:48px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -288,6 +290,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
     <div class="menu-card" onclick="singleSpellWord=null;singleSpellCallback=null;showScreen('spell')"><div class="mc-icon">🔡</div><div class="mc-label">הרכבת מילים<br>⚔️ 🍎</div></div>
     <div class="menu-card" onclick="startExam('words')"><div class="mc-icon">🎯</div><div class="mc-label">התאמת מילים<br>📖 🔊</div></div>
     <div class="menu-card" onclick="startExam('wordsZelda')"><div class="mc-icon">🎮</div><div class="mc-label">ZELDA<br>⚔️ 🛡️</div></div>
+    <div class="menu-card" onclick="showWordLenPicker()"><div class="mc-icon">📏</div><div class="mc-label">התאמה לפי אורך<br>2️⃣ 3️⃣ 4️⃣</div></div>
   </div>
   <button class="btn btn-purple btn-sm" id="resetScoreBtn" style="margin-top:18px" onclick="confirmResetScore()">🔄 איפוס ניקוד</button>
 </div>
@@ -345,6 +348,16 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
   <button class="exam-test-btn" onclick="startExam('spell')" style="margin-top:12px;width:100%;max-width:400px">📝 מבחן הרכבה!</button>
 </div>
 
+<!-- WORD LENGTH PICKER -->
+<div class="screen hidden" id="screen-wordlen">
+  <div class="scr-header">
+    <button class="back-btn" onclick="showScreen('menu')">🏠</button>
+    <div class="scr-title">📏 התאמה לפי אורך</div>
+  </div>
+  <div style="direction:rtl;opacity:.8;margin-bottom:14px;text-align:center" data-fem="בחרי כמה אותיות יהיו במילים 👇" data-masc="בחר כמה אותיות יהיו במילים 👇">בחרי כמה אותיות יהיו במילים 👇</div>
+  <div class="wordlen-grid" id="wordlenGrid"></div>
+</div>
+
 <!-- EXAM -->
 <div class="screen hidden" id="screen-exam">
   <div class="scr-header">
@@ -357,7 +370,7 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
     <div id="examEmoji" style="font-size:4.2rem;margin-bottom:10px">🍎</div>
     <div id="examHe" style="font-size:1.8rem;direction:rtl;margin-bottom:4px;min-height:28px;font-weight:600"></div>
     <div id="examPrompt" style="font-size:.85rem;opacity:.7;direction:rtl;margin-bottom:8px"></div>
-    <button class="aud-btn" id="examReplay" style="margin:0 auto 8px;display:block" onclick="if(window._curExamQ){var q=window._curExamQ;(examType==='words'||examType==='wordsZelda')?speakEN(q.en):speakHE(q.he||q.ex||'')}" data-fem-title="שמעי שוב 🔊" data-masc-title="שמע שוב 🔊" title="שמעי שוב 🔊">🔊</button>
+    <button class="aud-btn" id="examReplay" style="margin:0 auto 8px;display:block" onclick="if(window._curExamQ){var q=window._curExamQ;(examType==='words'||examType==='wordsZelda'||examType==='wordsByLength')?speakEN(q.en):speakHE(q.he||q.ex||'')}" data-fem-title="שמעי שוב 🔊" data-masc-title="שמע שוב 🔊" title="שמעי שוב 🔊">🔊</button>
     <div class="quiz-opts" id="examOpts"></div>
     <div id="wordsEnLabel" style="display:none;font-size:.85rem;opacity:.75;direction:rtl;margin:8px 0 4px" data-fem="בחרי את המילה הנכונה באנגלית 🇬🇧" data-masc="בחר את המילה הנכונה באנגלית 🇬🇧">בחרי את המילה הנכונה באנגלית 🇬🇧</div>
     <div class="quiz-opts" id="examOptsEn"></div>
@@ -1148,6 +1161,73 @@ function groupAndShuffle(words){
   return shuffle(groups).map(g=>shuffle(g)).flat();
 }
 
+// Real letter count of an entry's English word — spaces (multi-word entries
+// like "wake up") are gaps, not letters, so they're stripped before counting.
+// Shared by the words-matching difficulty ramp and its scoring.
+function wordLetterCount(en){
+  return en.replace(/\s+/g,'').length;
+}
+
+// Orders words-matching rounds by increasing difficulty: every 2-letter word
+// first, then every 3-letter word, then 4, and so on — each length bucket
+// shuffled internally. To keep it from feeling like a rigid staircase, each
+// step has a small chance to pull forward a word 1-2 letters longer than the
+// current bucket (borrowed straight out of its own future bucket, so every
+// word still plays exactly once — it just plays earlier than its "sorted" spot).
+function orderByDifficulty(words){
+  const byLen=new Map();
+  words.forEach(w=>{
+    const L=wordLetterCount(w.en);
+    if(!byLen.has(L)) byLen.set(L,[]);
+    byLen.get(L).push(w);
+  });
+  const lens=[...byLen.keys()].sort((a,b)=>a-b);
+  const buckets=new Map(lens.map(L=>[L,shuffle(byLen.get(L))]));
+  const ordered=[];
+  lens.forEach(L=>{
+    const cur=buckets.get(L);
+    while(cur.length){
+      if(ordered.length&&Math.random()<0.25){
+        const peekLens=[L+1,L+2].filter(pl=>buckets.has(pl)&&buckets.get(pl).length);
+        if(peekLens.length){
+          const pl=peekLens[Math.floor(Math.random()*peekLens.length)];
+          ordered.push(buckets.get(pl).pop());
+          continue;
+        }
+      }
+      ordered.push(cur.pop());
+    }
+  });
+  return ordered;
+}
+
+// The word-length picked on the "התאמה לפי אורך" screen — read by startExam()
+// when it builds the 'wordsByLength' question set.
+let wordLenFilter=null;
+
+function showWordLenPicker(){
+  if(!spellWordsLoaded){ showToast(T('⏳ טוענת מילים... נסי שוב בעוד רגע','⏳ טוען מילים... נסה שוב בעוד רגע')); return; }
+  buildWordLenGrid();
+  showScreen('wordlen');
+}
+
+function buildWordLenGrid(){
+  const g=document.getElementById('wordlenGrid');
+  g.innerHTML='';
+  const counts=new Map();
+  WORD_ROWS.forEach(w=>{
+    const L=wordLetterCount(w.en);
+    counts.set(L,(counts.get(L)||0)+1);
+  });
+  [...counts.keys()].sort((a,b)=>a-b).forEach(L=>{
+    const b=document.createElement('button');
+    b.className='btn btn-blue';
+    b.textContent=`${L} אותיות (${counts.get(L)})`;
+    b.onclick=()=>{ wordLenFilter=L; startExam('wordsByLength'); };
+    g.appendChild(b);
+  });
+}
+
 function loadSpellWords(){
   fetch('WORD_LIST.txt')
     .then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.text(); })
@@ -1185,6 +1265,15 @@ let spellExamMode=false;
 let spellExamCorrect=0;
 let spellExamTotal=0;
 let spellHelpUsed=0; // reset per word in updateSpellDisp()
+// Guards against checkSpell() processing a correct word twice — it can fire
+// both from placeLetterInSlot()'s auto-check (a 350ms setTimeout) and from
+// the player manually tapping "בדקי" around the same moment. A double-fire
+// on a single-word interlude is what caused "goes back to spelling instead
+// of matching": the first call correctly resolves and clears
+// singleSpellWord, so the second call — running before that resolution's own
+// timers finish — saw singleSpellWord already null and took the normal
+// cycle-through-SPELL_WORDS path instead of resuming words-matching.
+let spellSuccessHandled=false;
 
 // Words under 4 real letters (excluding gaps) only get 1 hint instead of 2 —
 // not much of a puzzle left to guess after two hints on a 3-letter word.
@@ -1483,7 +1572,15 @@ function checkSpell(){
   if(allOk){
     document.getElementById('spellFb').textContent='✅ מצוין! כתבת נכון!';
     if(spellExamMode) spellExamCorrect++;
-    addStar();
+    // Full success (no hints used this word) scores by word length instead of
+    // the usual flat star — a hint-assisted completion still gets the flat
+    // star, since useSpellHelp() already cost a star of its own per hint.
+    if(spellHelpUsed===0){
+      const realLen=spellTarget.filter(ch=>ch!==' ').length;
+      for(let i=0;i<realLen;i++) addStar();
+    } else {
+      addStar();
+    }
     showCatMascot(heName()+'! כתבת נכון! 😻');
     speakEN(currentWord.en);
     if(singleSpellWord){
@@ -1521,7 +1618,7 @@ let examType='';
 let examQs=[];
 let examIdx=0;
 let examScore=0;
-let examMaxScore=0; // words mode scores 3/1/0 per question, not a flat 1 — needed for % grading
+let examMaxScore=0; // words mode scores per-question by word length (see orderByDifficulty/maybeFinish), not a flat 1 — needed for % grading
 
 const EXAM_TITLES={letters:'📝 מבחן אותיות',spell:'📝 מבחן הרכבה',words:'🎯 התאמת מילים',wordsZelda:'🎮 ZELDA'};
 
@@ -1543,16 +1640,24 @@ function startExam(type){
     showScreen('spell');return;
   } else if(type==='words'){
     if(!spellWordsLoaded){ showToast(T('⏳ טוענת מילים... נסי שוב בעוד רגע','⏳ טוען מילים... נסה שוב בעוד רגע')); return; }
-    // Every word in the list, freshly regrouped+reshuffled each round (same
-    // topic-cluster logic as the spelling game) rather than a fixed subset.
-    examQs=groupAndShuffle(WORD_ROWS);
-    examMaxScore=examQs.length*5; // 2+2 pts for the two rows, +1 bonus for acing both first try
+    // Every word in the list, freshly re-ordered each round by increasing
+    // difficulty (2-letter words first, then 3, 4, ... with occasional
+    // longer-word previews) rather than a fixed subset.
+    examQs=orderByDifficulty(WORD_ROWS);
+    examMaxScore=examQs.reduce((s,q)=>s+Math.max(wordLetterCount(q.en),3),0);
   } else if(type==='wordsZelda'){
     if(!zeldaWordsLoaded){ showToast(T('⏳ טוענת מילים... נסי שוב בעוד רגע','⏳ טוען מילים... נסה שוב בעוד רגע')); return; }
-    examQs=groupAndShuffle(WORD_ROWS_ZELDA);
-    examMaxScore=examQs.length*5;
+    examQs=orderByDifficulty(WORD_ROWS_ZELDA);
+    examMaxScore=examQs.reduce((s,q)=>s+Math.max(wordLetterCount(q.en),3),0);
+  } else if(type==='wordsByLength'){
+    if(!spellWordsLoaded){ showToast(T('⏳ טוענת מילים... נסי שוב בעוד רגע','⏳ טוען מילים... נסה שוב בעוד רגע')); return; }
+    // Same round as 'words', just restricted to one chosen letter-count —
+    // wordLenFilter is set by buildWordLenGrid() right before this call.
+    examQs=shuffle(WORD_ROWS.filter(w=>wordLetterCount(w.en)===wordLenFilter));
+    examMaxScore=examQs.reduce((s,q)=>s+Math.max(wordLetterCount(q.en),3),0);
   }
-  document.getElementById('examTitle').textContent=EXAM_TITLES[type]||'📝 מבחן';
+  document.getElementById('examTitle').textContent=
+    type==='wordsByLength'?`🎯 התאמה - מילים בנות ${wordLenFilter} אותיות`:(EXAM_TITLES[type]||'📝 מבחן');
   showScreen('exam');
   showExamQ();
 }
@@ -1641,22 +1746,24 @@ function runWordsRound(q,rows){
 
   // Both rows use the identical 2/1/0 first-guess/retry scoring; the round
   // only advances once both are resolved. Getting BOTH right on the first
-  // guess (2+2) earns a +1 bonus, for 5 total — any other combination is
-  // just the plain sum of the two rows.
+  // guess is a perfect match — worth the word's own letter count (a 2-letter
+  // word is worth 2, a 5-letter word is worth 5, ...) so longer/harder words
+  // pay off more. Any other combination is just the plain sum of the two rows.
   let enPts=null,hePts=null;
   const maybeFinish=()=>{
     if(enPts===null||hePts===null) return;
-    const pts=(enPts===2&&hePts===2)?5:enPts+hePts;
+    const perfect=enPts===2&&hePts===2;
+    const pts=perfect?wordLetterCount(q.en):enPts+hePts;
     examScore+=pts;
     for(let i=0;i<pts;i++) addStar();
     document.getElementById('examFb').textContent=
-      pts===5?T('✅ מושלמת! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐','✅ מושלם! שני הכיוונים נכונים בניחוש ראשון + בונוס! ⭐⭐⭐⭐⭐')
+      perfect?T(`✅ מושלמת! שני הכיוונים נכונים בניחוש ראשון! ⭐ ${pts} נקודות`,`✅ מושלם! שני הכיוונים נכונים בניחוש ראשון! ⭐ ${pts} נקודות`)
       :pts>0?`✅ צברת ${pts} נקודות בסבב הזה!`
       :'❌ הפעם 0 נקודות - התשובות הנכונות מודגשות למעלה';
-    if(pts===5){
+    if(perfect){
       setTimeout(()=>{
         launchConfetti();
-        showCatMascot('🎉 בונוס! שני הכיוונים בניחוש ראשון! 🌟');
+        showCatMascot('🎉 התאמה מושלמת! שני הכיוונים בניחוש ראשון! 🌟');
       },400);
     }
     // Once the round is fully resolved, move straight into building the same
@@ -1705,7 +1812,7 @@ function showExamQ(){
   // Replay button speaks q.he, which for letters contains the English example word — would give away the answer
   document.getElementById('examReplay').style.display=examType==='letters'?'none':'';
 
-  if(examType==='words'){ runWordsRound(q,WORD_ROWS); return; }
+  if(examType==='words'||examType==='wordsByLength'){ runWordsRound(q,WORD_ROWS); return; }
   if(examType==='wordsZelda'){ runWordsRound(q,WORD_ROWS_ZELDA); return; }
 
   document.getElementById('examEmoji').textContent=q.em;
@@ -1809,13 +1916,13 @@ function showResults(){
   document.getElementById('resEmoji').textContent=emoji;
   const gl=document.getElementById('resGrade');
   gl.textContent=grade;gl.style.color=col;
-  document.getElementById('resScore').textContent=(examType==='words'||examType==='wordsZelda')
+  document.getElementById('resScore').textContent=(examType==='words'||examType==='wordsZelda'||examType==='wordsByLength')
     ? `${examScore} / ${maxScore} נקודות`
     : `${examScore} / ${total} נכון`;
   document.getElementById('resPct').textContent=`${pct}%`;
   document.getElementById('resMsg').textContent=msg;
   document.getElementById('resStars').textContent=`⭐ +${examScore} כוכבים הרווחת!`;
-  const backMap={letters:'letters',spell:'spell'};
+  const backMap={letters:'letters',spell:'spell',wordsByLength:'wordlen'};
   document.getElementById('resTryAgain').onclick=()=>startExam(examType);
   document.getElementById('resBack').onclick=()=>showScreen(backMap[examType]||'menu');
   showScreen('results');
