@@ -55,7 +55,7 @@
   // blob: URL. Real absolute URLs are baked in below because inside the worker's own
   // scope, `self.location` would otherwise resolve against that meaningless blob: address.
   const SW_SOURCE=`
-    const CACHE_NAME='michaela-eng-v5';
+    const CACHE_NAME='michaela-eng-v6';
     const PAGE_URL=${JSON.stringify(pageURL)};
     const ASSETS=${JSON.stringify([pageURL,wordListURL])};
     self.addEventListener('install',e=>{
@@ -1620,12 +1620,33 @@ function buildSpellSlots(target){
   }
 }
 
+// Invents a same-length "look-alike" word by swapping 1-2 of the real
+// word's letters for different ones, then returns just the swapped-in
+// letters — those become the pool's extra tiles. That way the spare tiles
+// always look like they could spell a genuinely similar word (same length,
+// mostly the same letters) instead of an arbitrary, obviously-unrelated
+// alphabet letter. Only 1 swap for 2-letter words, so even the shortest
+// words keep at least one letter in common with their invented look-alike.
+function inventDistractorLetters(realLetters){
+  const n=realLetters.length;
+  const numSwaps=n<=2?1:2;
+  const positions=shuffle([...Array(n).keys()]).slice(0,numSwaps);
+  const alpha='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const used=new Set();
+  return positions.map(i=>{
+    const orig=realLetters[i];
+    let repl;
+    do{ repl=alpha[Math.floor(Math.random()*alpha.length)]; }while(repl===orig||used.has(repl));
+    used.add(repl);
+    return repl;
+  });
+}
+
 function buildSpellTiles(letters){
   const c=document.getElementById('spellTiles');
   c.innerHTML='';
   letters=letters.filter(l=>l!==' '); // gaps aren't tiles
-  const alpha='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const distractors=shuffle([...alpha].filter(l=>!letters.includes(l))).slice(0,2);
+  const distractors=inventDistractorLetters(letters);
   const allTiles=shuffle([...letters,...distractors]);
   allTiles.forEach((letter,i)=>{
     const t=document.createElement('div');
