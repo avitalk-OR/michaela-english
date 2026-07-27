@@ -55,7 +55,7 @@
   // blob: URL. Real absolute URLs are baked in below because inside the worker's own
   // scope, `self.location` would otherwise resolve against that meaningless blob: address.
   const SW_SOURCE=`
-    const CACHE_NAME='michaela-eng-v4';
+    const CACHE_NAME='michaela-eng-v5';
     const PAGE_URL=${JSON.stringify(pageURL)};
     const ASSETS=${JSON.stringify([pageURL,wordListURL])};
     self.addEventListener('install',e=>{
@@ -217,6 +217,10 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 @keyframes seesawL{0%{transform:translateY(-18px) rotate(-15deg)}100%{transform:translateY(10px) rotate(10deg)}}
 @keyframes seesawR{0%{transform:translateY(10px) rotate(10deg)}100%{transform:translateY(-18px) rotate(-15deg)}}
 @keyframes hundredPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+#milestoneHundred,#milestoneSixSeven{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+#milestoneHundred.hidden,#milestoneSixSeven.hidden{display:none}
+#milestoneHundred{z-index:140;padding:28px;background:radial-gradient(circle at 50% 40%,rgba(255,215,0,.35),rgba(10,10,30,.94))}
+#milestoneSixSeven{z-index:141;background:rgba(10,10,30,.88)}
 /* RESPONSIVE */
 @media(max-width:370px){.menu-grid{gap:10px}.ltr-grid{grid-template-columns:repeat(5,1fr)}}
 /* ── Compact: fit all content in viewport without scrolling ── */
@@ -281,13 +285,13 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 </div>
 
 <!-- MILESTONE: multiples of 100 — the big one -->
-<div id="milestoneHundred" class="hidden" style="position:fixed;inset:0;z-index:140;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;background:radial-gradient(circle at 50% 40%,rgba(255,215,0,.35),rgba(10,10,30,.94));pointer-events:none">
+<div id="milestoneHundred" class="hidden">
   <div style="font-size:4.5rem;margin-bottom:10px;animation:hundredPulse .6s infinite alternate">🎆🏆🎆</div>
   <div id="mhText" style="font-size:clamp(1.6rem,7vw,3rem);font-weight:900;direction:rtl;background:linear-gradient(45deg,#FFD700,#FF6B9D,#4DC3FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.4;white-space:pre-line"></div>
 </div>
 
 <!-- MILESTONE: score ending in 67 — "six seven" meme easter egg -->
-<div id="milestoneSixSeven" class="hidden" style="position:fixed;inset:0;z-index:141;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;background:rgba(10,10,30,.88)">
+<div id="milestoneSixSeven" class="hidden">
   <div style="display:flex;gap:26px;align-items:center;margin-bottom:14px">
     <span style="font-size:5rem;display:inline-block;animation:seesawL .5s ease-in-out infinite alternate">🖐️</span>
     <span style="font-size:3.6rem;font-weight:900;color:#FFD700">6️⃣7️⃣</span>
