@@ -55,7 +55,7 @@
   // blob: URL. Real absolute URLs are baked in below because inside the worker's own
   // scope, `self.location` would otherwise resolve against that meaningless blob: address.
   const SW_SOURCE=`
-    const CACHE_NAME='michaela-eng-v7';
+    const CACHE_NAME='michaela-eng-v8';
     const PAGE_URL=${JSON.stringify(pageURL)};
     const ASSETS=${JSON.stringify([pageURL,wordListURL])};
     self.addEventListener('install',e=>{
@@ -1891,29 +1891,69 @@ const EXTRA_EN_WORDS=[
   'zebra','zero','zip','zone','zoo',
 ];
 
-function sharedPrefixLen(a,b){
-  let i=0;
-  while(i<a.length&&i<b.length&&a[i]===b[i]) i++;
-  return i;
+// Similarity for a same-length pair: mostly rewards letters that land in the
+// exact same position, plus a smaller bonus per letter the two share at all
+// (regardless of position). Doesn't require a shared first letter — with the
+// same-length filter in pickEnDistractors below, position-agreement is a much
+// better read on "genuinely similar" than shared-prefix-only ever was.
+function wordSimilarity(a,b){
+  let same=0;
+  for(let i=0;i<a.length;i++) if(a[i]===b[i]) same++;
+  const pool=[...b];
+  let overlap=0;
+  [...a].forEach(ch=>{
+    const idx=pool.indexOf(ch);
+    if(idx!==-1){ overlap++; pool.splice(idx,1); }
+  });
+  return same*3+overlap;
 }
 
-// Picks 2 wrong English options that look genuinely similar to the correct
-// word — same first letter, and the longest shared prefix available — first
-// from the given word list (each category has its own — words uses
-// WORD_ROWS, ZELDA uses WORD_ROWS_ZELDA), and only reaching into
-// EXTRA_EN_WORDS to fill any gap (rare letters, or small lists like ZELDA's
-// barely have same-starting-letter words at all).
+// Invents a fake same-length "similar" word by mutating a couple of the real
+// word's letters — used when the word list + EXTRA_EN_WORDS bank don't have
+// 2 real same-length words similar enough (common for longer or rarer
+// words). Space positions (multi-word entries like "wake up") are never
+// touched, so the invented word keeps the same word-shape.
+function inventSimilarWord(correctEn,avoid){
+  const chars0=[...correctEn];
+  const swappable=chars0.map((c,i)=>i).filter(i=>chars0[i]!==' ');
+  const numSwaps=Math.max(1,Math.min(3,Math.ceil(swappable.length/3)));
+  const alpha='abcdefghijklmnopqrstuvwxyz';
+  let attempt,tries=0;
+  do{
+    const chars=[...chars0];
+    shuffle(swappable).slice(0,numSwaps).forEach(i=>{
+      let repl;
+      do{ repl=alpha[Math.floor(Math.random()*alpha.length)]; }while(repl===chars[i]);
+      chars[i]=repl;
+    });
+    attempt=chars.join('');
+    tries++;
+  }while((attempt===correctEn||avoid.has(attempt))&&tries<10);
+  return attempt;
+}
+
+// Picks 2 wrong English options — always the same length as the correct
+// word, and as letter-similar to it as possible — first from the given word
+// list (each category has its own — words uses WORD_ROWS, ZELDA uses
+// WORD_ROWS_ZELDA) and EXTRA_EN_WORDS as a bigger bank, then invents fake
+// same-length look-alikes to fill any gap real words can't cover.
 function pickEnDistractors(correctEn,rows){
   const inList=new Set([...new Set(rows.map(w=>w.en))].filter(en=>en!==correctEn));
   const bank=EXTRA_EN_WORDS.filter(en=>en!==correctEn&&!inList.has(en));
-  // Rank the WHOLE combined pool by shared-prefix length together — ranking
-  // the list alone first (and only reaching into the bank when the list came
-  // up short on count) meant a weak 1-letter list match could beat a much
-  // better 2+ letter bank match that never even got compared. List words
-  // still win ties, as a mild preference, via the small +1 tiebreak.
-  const pool=[...inList,...bank];
-  const score=w=>sharedPrefixLen(correctEn,w)*10+(inList.has(w)?1:0);
-  return shuffle(pool).sort((a,b)=>score(b)-score(a)).slice(0,2);
+  // Real letter count (see wordLetterCount) rather than raw string length, so
+  // a multi-word entry like "wake up" is matched by other 6-letter words —
+  // not by any 7-character string that only ties it on the space included.
+  const targetLen=wordLetterCount(correctEn);
+  const pool=[...inList,...bank].filter(w=>wordLetterCount(w)===targetLen);
+  const score=w=>wordSimilarity(correctEn,w)*10+(inList.has(w)?1:0);
+  const picked=shuffle(pool).sort((a,b)=>score(b)-score(a)).slice(0,2);
+  const avoid=new Set([correctEn,...picked]);
+  while(picked.length<2){
+    const invented=inventSimilarWord(correctEn,avoid);
+    picked.push(invented);
+    avoid.add(invented);
+  }
+  return picked;
 }
 
 // The words-matching round itself: two option rows (English, then Hebrew)
