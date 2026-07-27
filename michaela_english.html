@@ -55,7 +55,7 @@
   // blob: URL. Real absolute URLs are baked in below because inside the worker's own
   // scope, `self.location` would otherwise resolve against that meaningless blob: address.
   const SW_SOURCE=`
-    const CACHE_NAME='michaela-eng-v6';
+    const CACHE_NAME='michaela-eng-v7';
     const PAGE_URL=${JSON.stringify(pageURL)};
     const ASSETS=${JSON.stringify([pageURL,wordListURL])};
     self.addEventListener('install',e=>{
@@ -951,10 +951,12 @@ function shuffle(arr){
 const CAT_MSGS_F=[
   'מיכאלה! 😸','כל הכבוד! 🐾','יופי! 😻','אלופה! 🌟','מדהים! 🐱','וואו! 😺','עוד! 🐾','נהדר! ✨',
   'את נהדרת! 💖','מצליחה יפה! 🎀','איזה כישרון! 😻','גאה בך! 🥰',
+  'תותחית! 🚀','אלה! 👑','זלדה גאה בך! 🎮','כוכבת מנצנצת! 🌟','השמש מחייכת אלייך! ☀️',
 ];
 const CAT_MSGS_M=[
   'אלון! 😸','כל הכבוד! 🐾','יופי! 😻','אלוף! 🌟','מדהים! 🐱','וואו! 😺','עוד! 🐾','נהדר! ✨',
   'אתה נהדר! 💖','מצליח יפה! 🎀','איזה כישרון! 😻','גאה בך! 🥰',
+  'תותח! 🚀','מלך! 👑','זלדה גאה בך! 🎮','כוכב מנצנץ! 🌟','השמש מחייכת אליך! ☀️',
 ];
 const catMsgs=()=>isMasc()?CAT_MSGS_M:CAT_MSGS_F;
 const TRANSITION_ANIMALS=['🐱','🐶','🐰','🦊','🐸','🐧','🦁','🐯','🦄','🐨'];
@@ -962,11 +964,15 @@ const TRANSITION_MSGS_F=[
   'מיכאלה את אלופה! ⭐','כל הכבוד! הלאה! 🚀','מצוין! עוד מילה! 💪','יאללה מיכאלה! 🌟',
   'מדהימה! המשיכי! ✨','וואו! את ממש טובה! 🏆','כוכבת! 🌟 הלאה!','עוד אחת! את יכולה! 💫',
   'את נהדרת מיכאלה! 💖','מצליחה יפה מאוד! 🎀','איזו הצלחה! עוד! 🥳','ממש כישרונית! 🌈',
+  'מיכאלה את תותחית! 🚀','מיכאלה את אלה! 👑','זלדה גאה בך! 🎮',
+  'את כוכבת מנצנצת בשמיים! 🌟','השמש מחייכת אלייך היום! ☀️',
 ];
 const TRANSITION_MSGS_M=[
   'אלון אתה אלוף! ⭐','כל הכבוד! הלאה! 🚀','מצוין! עוד מילה! 💪','יאללה אלון! 🌟',
   'מדהים! המשך! ✨','וואו! אתה ממש טוב! 🏆','כוכב! 🌟 הלאה!','עוד אחת! אתה יכול! 💫',
   'אתה נהדר אלון! 💖','מצליח יפה מאוד! 🎀','איזו הצלחה! עוד! 🥳','ממש כישרוני! 🌈',
+  'אלון אתה תותח! 🚀','אלון אתה מלך! 👑','זלדה גאה בך! 🎮',
+  'אתה כוכב מנצנץ בשמיים! 🌟','השמש מחייכת אליך היום! ☀️',
 ];
 const transitionMsgs=()=>isMasc()?TRANSITION_MSGS_M:TRANSITION_MSGS_F;
 let catTimer=null;
@@ -1764,7 +1770,10 @@ function checkSpell(){
         addStar();
       }
     }
-    showCatMascot(heName()+'! כתבת נכון! 😻');
+    // No fixed message here — the on-screen ✅ text above already confirms
+    // "correct", so the mascot bubble is free to pull a random compliment
+    // from catMsgs() instead of repeating the same line after every word.
+    showCatMascot();
     speakEN(currentWord.en);
     if(singleSpellWord){
       // Hand back to whichever caller (words-matching/ZELDA) sent us here —
