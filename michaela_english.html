@@ -55,7 +55,7 @@
   // blob: URL. Real absolute URLs are baked in below because inside the worker's own
   // scope, `self.location` would otherwise resolve against that meaningless blob: address.
   const SW_SOURCE=`
-    const CACHE_NAME='michaela-eng-v3';
+    const CACHE_NAME='michaela-eng-v4';
     const PAGE_URL=${JSON.stringify(pageURL)};
     const ASSETS=${JSON.stringify([pageURL,wordListURL])};
     self.addEventListener('install',e=>{
@@ -213,6 +213,10 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 .wt-animal{font-size:7rem;animation:animalJump .5s ease-out infinite alternate}
 @keyframes animalJump{0%{transform:translateY(0) scale(1)}100%{transform:translateY(-25px) scale(1.1)}}
 .wt-text{font-size:1.5rem;font-weight:700;color:#FFD700;direction:rtl;text-align:center}
+/* MILESTONES */
+@keyframes seesawL{0%{transform:translateY(-18px) rotate(-15deg)}100%{transform:translateY(10px) rotate(10deg)}}
+@keyframes seesawR{0%{transform:translateY(10px) rotate(10deg)}100%{transform:translateY(-18px) rotate(-15deg)}}
+@keyframes hundredPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 /* RESPONSIVE */
 @media(max-width:370px){.menu-grid{gap:10px}.ltr-grid{grid-template-columns:repeat(5,1fr)}}
 /* ── Compact: fit all content in viewport without scrolling ── */
@@ -268,6 +272,28 @@ body{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);min-height:100vh
 <div class="word-transition hidden" id="wordTransition">
   <div class="wt-animal" id="wtAnimal">🐱</div>
   <div class="wt-text" id="wtText"></div>
+</div>
+
+<!-- MILESTONE: multiples of 50 that aren't multiples of 100 -->
+<div class="word-transition hidden" id="milestoneFifty">
+  <div class="wt-animal">⭐</div>
+  <div class="wt-text" id="mfText"></div>
+</div>
+
+<!-- MILESTONE: multiples of 100 — the big one -->
+<div id="milestoneHundred" class="hidden" style="position:fixed;inset:0;z-index:140;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;background:radial-gradient(circle at 50% 40%,rgba(255,215,0,.35),rgba(10,10,30,.94));pointer-events:none">
+  <div style="font-size:4.5rem;margin-bottom:10px;animation:hundredPulse .6s infinite alternate">🎆🏆🎆</div>
+  <div id="mhText" style="font-size:clamp(1.6rem,7vw,3rem);font-weight:900;direction:rtl;background:linear-gradient(45deg,#FFD700,#FF6B9D,#4DC3FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.4;white-space:pre-line"></div>
+</div>
+
+<!-- MILESTONE: score ending in 67 — "six seven" meme easter egg -->
+<div id="milestoneSixSeven" class="hidden" style="position:fixed;inset:0;z-index:141;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;background:rgba(10,10,30,.88)">
+  <div style="display:flex;gap:26px;align-items:center;margin-bottom:14px">
+    <span style="font-size:5rem;display:inline-block;animation:seesawL .5s ease-in-out infinite alternate">🖐️</span>
+    <span style="font-size:3.6rem;font-weight:900;color:#FFD700">6️⃣7️⃣</span>
+    <span style="font-size:5rem;display:inline-block;animation:seesawR .5s ease-in-out infinite alternate">🤚</span>
+  </div>
+  <div style="font-size:1.3rem;font-weight:700;direction:rtl;color:#fff" id="ssText">SIX SEVEN! 📈📉</div>
 </div>
 
 <!-- WELCOME -->
@@ -460,6 +486,9 @@ const WORD_EMOJI={
   month:'📆',year:'🎊',question:'❓',answer:'✅',problem:'❗',idea:'💡',love:'❤️',
   strength:'💪',speed:'🏎️',temperament:'🎭',talk:'💬',stable:'🐴',board:'🏠',
   register:'📝',bye:'👋',need:'🙏',have:'🤲',silent:'🤫',prince:'🤴',defence:'🛡️',
+  as:'🟰',at:'📍',be:'🧘',by:'🚏',do:'✅',ex:'💔',go:'🚦',he:'👦',hi:'👋',id:'🪪',
+  'if':'❓',is:'🔵',it:'👉',me:'🙋',my:'🙆',no:'🙅',of:'🔗',ok:'👌',on:'🔛',or:'🤷',
+  so:'➡️',to:'🎯',tv:'📺',us:'👥',we:'🧑‍🤝‍🧑',
 };
 
 const CELEBRATIONS=[
@@ -621,8 +650,10 @@ function addStar(){
   updateStarsDisp();
   floatStar();
   // Since this only ever adds 1 at a time, "reaching" and "crossing" a
-  // multiple of 50 are the same moment — it always lands exactly on it.
-  if(totalStars>0&&totalStars%50===0) launchConfetti();
+  // milestone are the same moment — it always lands exactly on it.
+  if(totalStars>0&&totalStars%100===0) queueMilestone('hundred',totalStars);
+  else if(totalStars>0&&totalStars%50===0) queueMilestone('fifty',totalStars);
+  if(totalStars%100===67) queueMilestone('sixseven',totalStars);
 }
 // Mirrors addStar() for a wrong guess — clamped at 0 so the running total
 // never shows something confusing like a negative star count.
@@ -696,6 +727,73 @@ function launchConfetti(){
     c.appendChild(p);
   }
   setTimeout(()=>c.innerHTML='',4500);
+}
+
+// ── MILESTONES ────────────────────────────────────────────────────────────
+// Fired from addStar() when the running total lands on a meaningful number.
+// Queued rather than shown immediately in case two land in the very same
+// batch (a single long word's letter-count bonus calls addStar() several
+// times in a row) — without the queue, a second overlay could yank the
+// first one off-screen mid-animation.
+let milestoneQueue=[];
+let milestoneBusy=false;
+function queueMilestone(kind,value){
+  milestoneQueue.push({kind,value});
+  runMilestoneQueue();
+}
+function runMilestoneQueue(){
+  if(milestoneBusy||!milestoneQueue.length) return;
+  milestoneBusy=true;
+  const{kind,value}=milestoneQueue.shift();
+  const done=()=>{milestoneBusy=false;runMilestoneQueue();};
+  if(kind==='hundred') showHundredMilestone(value,done);
+  else if(kind==='fifty') showFiftyMilestone(value,done);
+  else if(kind==='sixseven') showSixSevenMilestone(value,done);
+  else done();
+}
+
+function showFiftyMilestone(value,done){
+  const el=document.getElementById('milestoneFifty');
+  document.getElementById('mfText').textContent=`⭐ ${value} כוכבים! ⭐\n${T('איזה יופי!','איזה כיף!')}`;
+  el.classList.remove('hidden');
+  launchConfetti();
+  playChime([{freq:880,delay:0,dur:.18},{freq:1175,delay:130,dur:.22}]);
+  setTimeout(()=>{el.classList.add('hidden');done();},1700);
+}
+
+function showHundredMilestone(value,done){
+  const el=document.getElementById('milestoneHundred');
+  document.getElementById('mhText').textContent=`🎉 ${value} כוכבים!! 🎉\n${T(`${heName()} את פשוט אלופה!`,`${heName()} אתה פשוט אלוף!`)}`;
+  el.classList.remove('hidden');
+  launchConfetti();
+  setTimeout(launchConfetti,350);
+  playFanfare();
+  speakHE(T(`${value} כוכבים! את אלופה!`,`${value} כוכבים! אתה אלוף!`));
+  setTimeout(()=>{el.classList.add('hidden');done();},2700);
+}
+
+function showSixSevenMilestone(value,done){
+  const el=document.getElementById('milestoneSixSeven');
+  document.getElementById('ssText').textContent=`${value}?! SIX SEVEN! 🖐️🤚📈📉`;
+  el.classList.remove('hidden');
+  playSixSevenSound();
+  speakEN('Six! Seven!');
+  setTimeout(()=>{el.classList.add('hidden');done();},1900);
+}
+
+// Small helper on top of _beep() for a short sequence of notes — used by the
+// milestone sounds below instead of one flat beep, since a couple of staggered
+// tones reads as an actual little tune rather than a plain alert noise.
+function playChime(notes){
+  notes.forEach(n=>setTimeout(()=>_beep(n.freq,n.dur),n.delay));
+}
+function playFanfare(){
+  playChime([{freq:523.25,delay:0,dur:.16},{freq:659.25,delay:140,dur:.16},{freq:783.99,delay:280,dur:.16},{freq:1046.5,delay:420,dur:.55}]);
+}
+// Low-then-high two-tone "seesaw", echoing the up/down hand gesture of the
+// SIX SEVEN meme — not meant to sound as polished as playFanfare(), just goofy.
+function playSixSevenSound(){
+  playChime([{freq:196,delay:0,dur:.16},{freq:392,delay:180,dur:.14},{freq:587.33,delay:360,dur:.22}]);
 }
 
 // ── SPEECH ────────────────────────────────────────────────────────────────
@@ -1128,6 +1226,37 @@ function loadZeldaWords(){
     });
 }
 
+// Extra 2-letter words, folded into WORD_ROWS (see loadSpellWords) rather than
+// kept as their own separate pool like ZELDA — they belong in the same
+// spelling/matching/by-length rotation as everything else, just short.
+const WORD_LIST_TWO_LETTERS_FALLBACK=`As – כמו
+At – אצל
+Be – להיות
+By – ליד
+Do – לעשות
+Ex – לשעבר
+Go – ללכת
+He – הוא
+Hi – שלום
+Id – זהות
+If – אם
+In – בתוך
+Is – הינו
+It – זה
+Me – אותי
+My – שלי
+No – לא
+Of – של
+Ok – בסדר
+On – על
+Or – או
+So – אז
+To – אל
+Tv – טלוויזיה
+Up – למעלה
+Us – אותנו
+We – אנחנו`;
+
 let SPELL_WORDS=[];
 let WORD_ROWS=[]; // parsed rows in the source list's original order, kept so the
                    // words-quiz can regroup+reshuffle fresh each round without
@@ -1229,15 +1358,23 @@ function buildWordLenGrid(){
 }
 
 function loadSpellWords(){
-  fetch('WORD_LIST.txt')
+  const mainP=fetch('WORD_LIST.txt')
     .then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.text(); })
-    .catch(()=>WORD_LIST_FALLBACK)
-    .then(txt=>{
-      WORD_ROWS=parseWordListText(txt);
-      SPELL_WORDS=groupAndShuffle(WORD_ROWS);
-      spellWordsLoaded=true;
-      if(!document.getElementById('screen-spell').classList.contains('hidden')) updateSpellDisp();
-    });
+    .catch(()=>WORD_LIST_FALLBACK);
+  const twoLetterP=fetch('WORD_LIST_TWO_LETTARS.txt')
+    .then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.text(); })
+    .catch(()=>WORD_LIST_TWO_LETTERS_FALLBACK);
+  Promise.all([mainP,twoLetterP]).then(([mainTxt,twoTxt])=>{
+    const mainRows=parseWordListText(mainTxt);
+    // Skip any 2-letter entry already present in the main list (e.g. "up")
+    // so the same word never ends up twice in the spelling/matching pools.
+    const already=new Set(mainRows.map(w=>w.en));
+    const twoRows=parseWordListText(twoTxt).filter(w=>!already.has(w.en));
+    WORD_ROWS=[...mainRows,...twoRows];
+    SPELL_WORDS=groupAndShuffle(WORD_ROWS);
+    spellWordsLoaded=true;
+    if(!document.getElementById('screen-spell').classList.contains('hidden')) updateSpellDisp();
+  });
 }
 
 let spellIdx=0;
@@ -1265,6 +1402,11 @@ let spellExamMode=false;
 let spellExamCorrect=0;
 let spellExamTotal=0;
 let spellHelpUsed=0; // reset per word in updateSpellDisp()
+// True as soon as ANY letter has ever landed in the wrong slot for the
+// current word — even if it's later fixed and the word ends up fully
+// correct, this word earns zero stars. Reset per word in updateSpellDisp();
+// set in placeLetterInSlot() below.
+let spellMistakeMade=false;
 // Guards against checkSpell() processing a correct word twice — it can fire
 // both from placeLetterInSlot()'s auto-check (a 350ms setTimeout) and from
 // the player manually tapping "בדקי" around the same moment. A double-fire
@@ -1420,6 +1562,8 @@ function updateSpellDisp(){
   }
   document.getElementById('spellScoreBadge').textContent=`⭐ ${totalStars}`;
   spellHelpUsed=0;
+  spellSuccessHandled=false;
+  spellMistakeMade=false;
   updateSpellHelpBtn();
 }
 
@@ -1515,6 +1659,7 @@ function placeLetterInSlot(idx,letter,tileEl){
   spellSlotData[idx]=letter;
   slot.textContent=letter;
   const correct=letter===spellTarget[idx];
+  if(!correct) spellMistakeMade=true;
   slot.className='spell-slot filled '+(correct?'correct':'wrong');
   if(tileEl) tileEl.classList.add('used');
   speakEN(letter);
@@ -1570,16 +1715,29 @@ function checkSpell(){
   });
   const currentWord=singleSpellWord||SPELL_WORDS[spellIdx%SPELL_WORDS.length];
   if(allOk){
-    document.getElementById('spellFb').textContent='✅ מצוין! כתבת נכון!';
+    // Guards against this whole branch running twice for the same word: it
+    // can otherwise fire both from placeLetterInSlot()'s auto-check (a 350ms
+    // setTimeout) and from the player tapping "בדקי" around the same moment
+    // — the second, stale call would double-award stars and, worse, run the
+    // wrong navigation path (see singleSpellWord below).
+    if(spellSuccessHandled) return;
+    spellSuccessHandled=true;
     if(spellExamMode) spellExamCorrect++;
-    // Full success (no hints used this word) scores by word length instead of
-    // the usual flat star — a hint-assisted completion still gets the flat
-    // star, since useSpellHelp() already cost a star of its own per hint.
-    if(spellHelpUsed===0){
-      const realLen=spellTarget.filter(ch=>ch!==' ').length;
-      for(let i=0;i<realLen;i++) addStar();
+    // Any letter that was ever placed in the wrong slot for this word — even
+    // if later corrected — earns zero stars for it. Only a clean, no-wrong-
+    // placement completion scores at all; among those, no hints used scores
+    // by word length, hint-assisted still gets the flat star (useSpellHelp()
+    // already cost a star of its own per hint).
+    if(spellMistakeMade){
+      document.getElementById('spellFb').textContent=T('✅ נכון עכשיו! בלי כוכבים הפעם — הייתה טעות בדרך','✅ נכון עכשיו! בלי כוכבים הפעם — הייתה טעות בדרך');
     } else {
-      addStar();
+      document.getElementById('spellFb').textContent='✅ מצוין! כתבת נכון!';
+      if(spellHelpUsed===0){
+        const realLen=spellTarget.filter(ch=>ch!==' ').length;
+        for(let i=0;i<realLen;i++) addStar();
+      } else {
+        addStar();
+      }
     }
     showCatMascot(heName()+'! כתבת נכון! 😻');
     speakEN(currentWord.en);
@@ -1594,6 +1752,7 @@ function checkSpell(){
       setTimeout(()=>showWordTransition(()=>nextSpellWord()),800);
     }
   } else {
+    spellMistakeMade=true;
     document.getElementById('spellFb').textContent=T('❌ יש אותיות לא נכונות — נסי שוב!','❌ יש אותיות לא נכונות — נסה שוב!');
     speakEN(currentWord.en);
   }
